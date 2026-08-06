@@ -41,9 +41,16 @@ export default Object.freeze({
   // #endif
 
   // #ifdef H5
-  ApiBaseUrl_Local: 'http://localhost/Vegetable.API/',
-  ApiOwnerUrl_Local: 'http://localhost/Vegetable.API/owner/',
-  ApiUserUrl_Local: 'http://localhost/Vegetable.API/users/',
+  // The H5 target is the one that gets pointed at whatever is running locally —
+  // an IIS-hosted Vegetable.API, or `npm run mock:api`. VITE_API_BASE_URL in
+  // apps/mobile/.env.development.local overrides it without editing this file;
+  // the literal below is what it was before that hook existed. app-plus is
+  // untouched, since it never reads Vite env.
+  ApiBaseUrl_Local: import.meta.env.VITE_API_BASE_URL || 'http://localhost/Vegetable.API/',
+  ApiOwnerUrl_Local:
+    (import.meta.env.VITE_API_BASE_URL || 'http://localhost/Vegetable.API/') + 'owner/',
+  ApiUserUrl_Local:
+    (import.meta.env.VITE_API_BASE_URL || 'http://localhost/Vegetable.API/') + 'users/',
   AdminBaseUrl_Local: 'http://localhost:3000/',
   ObsBaseUrl_Local: 'http://localhost:3000/',
   // #endif

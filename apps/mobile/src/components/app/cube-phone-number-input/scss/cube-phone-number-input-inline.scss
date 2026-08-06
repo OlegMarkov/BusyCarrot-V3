@@ -1,90 +1,86 @@
-$cube-phone-number-input-border-color: #cccccc !default;
-$cube-phone-number-input-placeholder-color: #999999 !default;
-$cube-phone-number-input-country-code-color: #999999 !default;
-
-.cube-phone-number-input-inline {
+/*
+ * The phone field, drawn on Industry.
+ *
+ * The design puts the dial code and the number in two separate framed boxes
+ * with an 8px gap — a 58 x 44 code box beside a 44px-tall .input — rather than
+ * the single rounded well this component shipped with. So the wrapper stops
+ * being a box at all and becomes the row; its two children carry the frames.
+ *
+ * Only presentation lives here. The component's parsing, country list and
+ * `@update` payload are untouched.
+ *
+ * The selector is the component's own root class, not the `-inline` modifier
+ * the page used to pass in. InputPhoneNumber sets `inheritAttrs: false` and
+ * spreads `$attrs` onto the inner <input>, and in Vue 3 `class` travels in
+ * `$attrs` — so that modifier was landing on the text field rather than the
+ * wrapper, and the wrapper rules (border: 0, transparent, no padding) were
+ * being applied to the one element that needed the opposite. Keying off the
+ * root removes the trap.
+ */
+.cube-phone-number-input {
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
   cursor: text;
   width: 100%;
-  appearance: none;
-  outline: none;
   box-sizing: border-box;
-  border: 1px solid $cube-phone-number-input-border-color;
-  border-radius: 2px;
-  padding: 4px 16px;
-  font-size: inherit;
-  font-family: inherit;
-  font-weight: inherit;
-  line-height: 1.5;
-  color: inherit;
-  background-color: white;
-  transition: all 250ms;
+  /* the frame moved to the children */
+  border: 0 none;
+  border-radius: 0;
+  padding: 0;
+  background-color: transparent;
+
   .country-code-selector {
-    flex: 1 0 auto;
+    flex: 0 0 auto;
+    width: 58px;
+    max-width: 58px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     box-sizing: border-box;
-    max-width: 120px;
     appearance: none;
     outline: none;
-    margin: 0 1em 0 0;
-    padding: 0 1em 0 0;
-    border: 0 none;
-    border-right: 1px solid $cube-phone-number-input-border-color;
+    margin: 0 8px 0 0;
+    padding: 0;
+    border: 1px solid var(--color-divider);
     border-radius: 0;
-    background-color: inherit;
-    font-size: inherit;
-    font-family: inherit;
-    font-weight: inherit;
-    line-height: inherit;
-    color: $cube-phone-number-input-country-code-color;
+    background-color: transparent;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--color-text);
     overflow: hidden;
     white-space: nowrap;
-    text-overflow: ellipsis;
     cursor: pointer;
-    &:invalid {
-      color: $cube-phone-number-input-placeholder-color;
-    }
   }
+
   .phone-number-input {
     flex: 1 1 auto;
     width: 100%;
+    min-height: 44px;
     box-sizing: border-box;
     appearance: none;
     outline: none;
     margin: 0;
-    padding: 0;
-    border: 0 none;
-    background-color: inherit;
-    font-size: inherit;
-    font-family: inherit;
-    font-weight: inherit;
-    line-height: inherit;
-    color: inherit;
+    padding: 6px 10px;
+    border: 1px solid var(--color-divider);
+    border-radius: 0;
+    background-color: var(--color-surface);
+    font-family: var(--font-body);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    color: var(--color-text);
+
     &::placeholder {
-      color: $cube-phone-number-input-placeholder-color;
+      color: var(--color-neutral-500);
       opacity: 1; // Firefox
-      background-color: inherit;
-      font-size: inherit;
-      font-family: inherit;
-      font-weight: inherit;
-      line-height: inherit;
-    }
-    // Internet Explorer 10-11
-    &:-ms-input-placeholder {
-      color: $cube-phone-number-input-placeholder-color;
-      background-color: inherit;
-      font-size: inherit;
-      font-family: inherit;
-      font-weight: inherit;
-      line-height: inherit;
-    }
-    // Microsoft Edge
-    &::-ms-input-placeholder {
-      color: $cube-phone-number-input-placeholder-color;
-      background-color: inherit;
-      font-size: inherit;
-      font-family: inherit;
-      font-weight: inherit;
-      line-height: inherit;
+      font-family: var(--font-body);
+      font-size: 14px;
+      letter-spacing: 0.04em;
     }
   }
 }

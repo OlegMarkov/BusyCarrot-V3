@@ -7,7 +7,7 @@
       :range-key="locale"
       @change="onCountry"
     >
-      <view class="uni-input">{{ countriesSorted[selectedIndex]?.[locale] }}</view>
+      <view class="uni-input">{{ dialCode }}</view>
     </picker>
     <input
       ref="input"
@@ -28,6 +28,7 @@ import {
   parsePhoneNumber,
   parseIncompletePhoneNumber,
   formatIncompletePhoneNumber,
+  getCountryCallingCode,
   ParseError
 } from 'libphonenumber-js/max'
 import countriesList from './assets/countries.json'
@@ -98,6 +99,22 @@ export default {
     /** What the field displays: the digits so far, grouped for the country. */
     phoneNumberFormatted() {
       return formatIncompletePhoneNumber(this.phoneNumber || '', this.selectedCountry)
+    },
+
+    /**
+     * The picker's trigger shows the dial code alone ("+7"), not the country
+     * label — the design gives it a 58px box, which the full "Russia +7" of
+     * countries.json cannot fit. The picker's own list is unchanged and still
+     * lists countries by name, so nothing is lost in choosing one.
+     */
+    dialCode() {
+      try {
+        return '+' + getCountryCallingCode(this.selectedCountry)
+      } catch {
+        // An unknown or empty country code: fall back to the list label rather
+        // than rendering "+undefined".
+        return this.countriesSorted[this.selectedIndex]?.[this.locale] ?? ''
+      }
     }
   },
   mounted() {

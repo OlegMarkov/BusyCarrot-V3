@@ -136,6 +136,136 @@ const SUBSCRIPTION_TYPES = [
   { id: 'st3', title: 'Год', months: 12, cost: 4500, currencyCode: 'RUB' }
 ]
 
+/* ── the captcha plate ─────────────────────────────────────────────────
+ *
+ * The login screen asks the API for a base64 GIF and shows it in a 104 x 44
+ * plate. Rather than serve a fixed placeholder, this draws one: a 5 x 7 bitmap
+ * per digit, scaled 3x, on to an indexed GIF built by hand.
+ *
+ * Digits only — the real API issues alphanumerics. This exists so the login
+ * screen can be exercised, not to reproduce the API's character set. The stub
+ * accepts any answer.
+ */
+
+const DIGITS = [
+  [0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e], // 0
+  [0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e], // 1
+  [0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f], // 2
+  [0x1f, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0e], // 3
+  [0x02, 0x06, 0x0a, 0x12, 0x1f, 0x02, 0x02], // 4
+  [0x1f, 0x10, 0x1e, 0x01, 0x01, 0x11, 0x0e], // 5
+  [0x06, 0x08, 0x10, 0x1e, 0x11, 0x11, 0x0e], // 6
+  [0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08], // 7
+  [0x0e, 0x11, 0x11, 0x0e, 0x11, 0x11, 0x0e], // 8
+  [0x0e, 0x11, 0x11, 0x0f, 0x01, 0x02, 0x0c] // 9
+]
+
+const CAPTCHA_W = 104
+const CAPTCHA_H = 44
+
+// Palette indices: 0 ground, 1 ink, 2 accent ink, 3 hairline.
+const PALETTE = [
+  [0xf5, 0xf5, 0xf8],
+  [0x42, 0x42, 0x44],
+  [0x41, 0x61, 0x80],
+  [0xc4, 0xc4, 0xc8]
+]
+
+function drawCaptcha(text) {
+  const px = new Uint8Array(CAPTCHA_W * CAPTCHA_H) // index 0 everywhere
+  const scale = 3
+  const glyphW = 5 * scale
+  const glyphH = 7 * scale
+  const gap = 6
+  const totalW = text.length * glyphW + (text.length - 1) * gap
+  let x0 = Math.round((CAPTCHA_W - totalW) / 2)
+  const y0 = Math.round((CAPTCHA_H - glyphH) / 2)
+
+  for (let g = 0; g < text.length; g++) {
+    const rows = DIGITS[Number(text[g])]
+    const ink = g % 2 === 0 ? 1 : 2
+    // A small vertical jitter per glyph, the way the design rotates its own.
+    const dy = [-2, 1, -1, 2][g % 4]
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (!(rows[r] & (1 << (4 - c)))) continue
+        for (let sy = 0; sy < scale; sy++) {
+          for (let sx = 0; sx < scale; sx++) {
+            const x = x0 + c * scale + sx
+            const y = y0 + r * scale + sy + dy
+            if (x >= 0 && x < CAPTCHA_W && y >= 0 && y < CAPTCHA_H) px[y * CAPTCHA_W + x] = ink
+          }
+        }
+      }
+    }
+    x0 += glyphW + gap
+  }
+
+  // The strike-through the design draws across its plate.
+  for (let x = 4; x < CAPTCHA_W - 4; x++) {
+    const y = Math.round(CAPTCHA_H * 0.56 - (x - CAPTCHA_W / 2) * 0.07)
+    if (y >= 0 && y < CAPTCHA_H) px[y * CAPTCHA_W + x] = 3
+  }
+
+  return gifBase64(px, CAPTCHA_W, CAPTCHA_H)
+}
+
+/**
+ * A GIF87a with the "uncompressed LZW" trick: with a minimum code size of 7 the
+ * codes are 8 bits wide, and emitting a clear code before the dictionary can
+ * grow past 255 entries keeps them there — so every pixel is one literal byte
+ * and no compressor is needed.
+ */
+function gifBase64(px, w, h) {
+  const out = []
+  const push = (...b) => out.push(...b)
+  const short = (n) => push(n & 0xff, (n >> 8) & 0xff)
+
+  push(0x47, 0x49, 0x46, 0x38, 0x37, 0x61) // GIF87a
+  short(w)
+  short(h)
+  push(0xf6, 0x00, 0x00) // global table, 128 entries (2^7)
+
+  for (let i = 0; i < 128; i++) {
+    const c = PALETTE[i] || [0, 0, 0]
+    push(c[0], c[1], c[2])
+  }
+
+  push(0x2c) // image descriptor
+  short(0)
+  short(0)
+  short(w)
+  short(h)
+  push(0x00)
+  push(0x07) // LZW minimum code size
+
+  const CLEAR = 128
+  const EOI = 129
+  const codes = []
+  let sinceClear = 0
+  codes.push(CLEAR)
+  for (let i = 0; i < px.length; i++) {
+    if (sinceClear >= 120) {
+      codes.push(CLEAR)
+      sinceClear = 0
+    }
+    codes.push(px[i])
+    sinceClear++
+  }
+  codes.push(EOI)
+
+  for (let i = 0; i < codes.length; i += 255) {
+    const chunk = codes.slice(i, i + 255)
+    push(chunk.length, ...chunk)
+  }
+  push(0x00, 0x3b)
+
+  return Buffer.from(Uint8Array.from(out)).toString('base64')
+}
+
+const randomCaptcha = () =>
+  Array.from({ length: 4 }, () => String(Math.floor(Math.random() * 10))).join('')
+
 /* ── reads ─────────────────────────────────────────────────────────────── */
 
 const last = (path) => path.split('/').pop()
@@ -168,6 +298,8 @@ const GETS = [
   [/^settings\/discounts$/, () => [{ id: 'd1', months: 6, percent: 10 }]],
   [/^images/, () => []],
   [/^log$/, () => ({ ok: true })],
+  [/^users\/getcaptcha/, () => drawCaptcha(randomCaptcha())],
+  [/^users\/sendverificationcall/, () => ({ ok: true })],
   [/^users\/sendverification/, () => ({ ok: true })],
   [/^users\/authenticate$/, () => ({ accessToken: 'mock-token', refreshToken: 'mock-refresh' })],
   [/^payment\/initpayment/, () => ({ url: 'https://example.com/pay' })]
@@ -195,6 +327,11 @@ const COLLECTIONS = [
 const collectionFor = (path) => COLLECTIONS.find(([re]) => re.test(path))
 
 function write(method, path, body) {
+  // Login: any code is accepted — this stub does not place calls.
+  if (path === 'users/authenticate') {
+    return { token: 'mock-token', user: { id: 'u1', ownerId: OWNER_ID, phoneNumber: body?.user?.phoneNumber || '', language: body?.user?.language || 'ru', onboardingCompleted: true, userDatas: [] } }
+  }
+
   const found = collectionFor(path)
   if (!found) return { ok: true }
   const [, items, prefix] = found
