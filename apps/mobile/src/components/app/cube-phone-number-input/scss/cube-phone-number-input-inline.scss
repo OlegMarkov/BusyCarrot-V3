@@ -1,0 +1,90 @@
+$cube-phone-number-input-border-color: #cccccc !default;
+$cube-phone-number-input-placeholder-color: #999999 !default;
+$cube-phone-number-input-country-code-color: #999999 !default;
+
+.cube-phone-number-input-inline {
+  display: flex;
+  cursor: text;
+  width: 100%;
+  appearance: none;
+  outline: none;
+  box-sizing: border-box;
+  border: 1px solid $cube-phone-number-input-border-color;
+  border-radius: 2px;
+  padding: 4px 16px;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1.5;
+  color: inherit;
+  background-color: white;
+  transition: all 250ms;
+  .country-code-selector {
+    flex: 1 0 auto;
+    box-sizing: border-box;
+    max-width: 120px;
+    appearance: none;
+    outline: none;
+    margin: 0 1em 0 0;
+    padding: 0 1em 0 0;
+    border: 0 none;
+    border-right: 1px solid $cube-phone-number-input-border-color;
+    border-radius: 0;
+    background-color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: $cube-phone-number-input-country-code-color;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    &:invalid {
+      color: $cube-phone-number-input-placeholder-color;
+    }
+  }
+  .phone-number-input {
+    flex: 1 1 auto;
+    width: 100%;
+    box-sizing: border-box;
+    appearance: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    border: 0 none;
+    background-color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: inherit;
+    &::placeholder {
+      color: $cube-phone-number-input-placeholder-color;
+      opacity: 1; // Firefox
+      background-color: inherit;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+    }
+    // Internet Explorer 10-11
+    &:-ms-input-placeholder {
+      color: $cube-phone-number-input-placeholder-color;
+      background-color: inherit;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+    }
+    // Microsoft Edge
+    &::-ms-input-placeholder {
+      color: $cube-phone-number-input-placeholder-color;
+      background-color: inherit;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+    }
+  }
+}

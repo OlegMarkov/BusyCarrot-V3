@@ -1,0 +1,339 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(list-item|nav-bar|badge|icons|list|popup|section|transition)$": "@/components/ui/uni-$1/uni-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "[[vegetable]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/employee/employees",
+      "style": {
+        "navigationBarTitleText": "[[Employees]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/employee/edit",
+      "style": {
+        "navigationBarTitleText": "[[editEmployee]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/service/services",
+      "style": {
+        "navigationBarTitleText": "[[services]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/service/edit",
+      "style": {
+        "navigationBarTitleText": "[[editService]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/service/serviceDuration",
+      "style": {
+        "navigationBarTitleText": "[[serviceDuration]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/reservation/edit",
+      "style": {
+        "navigationBarTitleText": "[[editReservation]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/settings",
+      "style": {
+        "navigationBarTitleText": "[[settings]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/general",
+      "style": {
+        "navigationBarTitleText": "[[general]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/companyInformation",
+      "style": {
+        "navigationBarTitleText": "[[companyInformation]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/account",
+      "style": {
+        "navigationBarTitleText": "[[caccount]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/currencies",
+      "style": {
+        "navigationBarTitleText": "[[currencies]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/languages",
+      "style": {
+        "navigationBarTitleText": "[[languages]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/notification/edit",
+      "style": {
+        "navigationBarTitleText": "[[notificationedit]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/notification/notifications",
+      "style": {
+        "navigationBarTitleText": "[[notification]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/notification/settings",
+      "style": {
+        "navigationBarTitleText": "[[notificationsettings]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/address",
+      "style": {
+        "navigationBarTitleText": "[[address]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/mainGallery",
+      "style": {
+        "navigationBarTitleText": "[[gallery]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/socialLinks",
+      "style": {
+        "navigationBarTitleText": "[[social links]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/subscriptions",
+      "style": {
+        "navigationBarTitleText": "[[subscriptions]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/schedule/schedules",
+      "style": {
+        "navigationBarTitleText": "[[schedules]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/schedule/edit",
+      "style": {
+        "navigationBarTitleText": "[[schedule edit]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/schedule/scheduleType",
+      "style": {
+        "navigationBarTitleText": "[[scheduleType]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/settings/schedule/scheduleTime",
+      "style": {
+        "navigationBarTitleText": "[[scheduleTime]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/customer/customers",
+      "style": {
+        "navigationBarTitleText": "[[Employees]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/customer/edit",
+      "style": {
+        "navigationBarTitleText": "[[editEmployee]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/customer/contactImportList",
+      "style": {
+        "navigationBarTitleText": "[[editEmployee]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/login/loginint",
+      "style": {
+        "navigationBarTitleText": "[[login]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    },
+    {
+      "path": "pages/onboarding/onboarding",
+      "style": {
+        "navigationBarTitleText": "[[onboarding]]",
+        "app-plus": {
+          "titleNView": false,
+          "bounce": "none"
+        }
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "[[vegetable]]",
+    "navigationBarBackgroundColor": "#f2f2f3",
+    "backgroundColor": "#f2f2f3"
+  },
+  "tabBar": {
+    "color": "#7a7a7d",
+    "selectedColor": "#5980a6",
+    "borderStyle": "black",
+    "backgroundColor": "#f2f2f3",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/icons/calendar.png",
+        "selectedIconPath": "static/icons/calendarSelected.png"
+      },
+      {
+        "pagePath": "pages/customer/customers",
+        "iconPath": "static/icons/clients.png",
+        "selectedIconPath": "static/icons/clientsSelcted.png"
+      },
+      {
+        "pagePath": "pages/service/services",
+        "iconPath": "static/icons/services.png",
+        "selectedIconPath": "static/icons/servicesSelected.png"
+      },
+      {
+        "pagePath": "pages/settings/schedule/schedules",
+        "iconPath": "static/icons/schedules.png",
+        "selectedIconPath": "static/icons/schedulesSelected.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "iconPath": "static/icons/settings.png",
+        "selectedIconPath": "static/icons/settingsSelected.png"
+      }
+    ]
+  }
+}

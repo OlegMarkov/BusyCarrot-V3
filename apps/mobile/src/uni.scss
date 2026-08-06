@@ -1,0 +1,74 @@
+
+/*Theme colors*/
+$theme-blue: 	#0FB2F2;
+$theme-green: 	#118C3C;
+$theme-yellow: 	#F2A007;
+$theme-orange: 	#D96704;
+$theme-red: 	#dd524d;
+
+$uni-color-primary: $theme-blue;
+$uni-color-success: $theme-green;
+$uni-color-warning: $theme-yellow;
+$uni-color-error: $theme-red;
+
+$uni-color: #118C3C;
+
+/* Basic color of text */
+$uni-text-color:#333;//Basic color
+$uni-input-text-color:#292929;//Basic input text color
+$uni-text-color-inverse:#fff;//Reverse color
+$uni-text-color-grey:#999;//Secondary gray, such as loading more prompt information
+$uni-text-color-placeholder: #808080;
+$uni-text-color-disable:#c0c0c0;
+
+/* Background color */
+$uni-bg-color:#ffffff;
+$uni-bg-color-grey:#f8f8f8;
+$uni-bg-color-hover:#f1f1f1;
+$uni-bg-color-mask:rgba(0, 0, 0, 0.4);
+
+/* Border color */
+$uni-border-color:#c8c7cc;
+
+/* Size variables */
+
+/* Text size */
+$uni-font-size-sm:26upx;
+$uni-font-size-base:30upx;
+$uni-font-size-lg:32upx;
+$uni-font-size-xlg:36upx;
+
+/* Image size */
+$uni-img-size-sm:40upx;
+$uni-img-size-base:52upx;
+$uni-img-size-lg:80upx;
+
+/* Border Radius */
+$uni-border-radius-sm: 4upx;
+$uni-border-radius-base: 6upx;
+$uni-border-radius-lg: 12upx;
+$uni-border-radius-circle: 50%;
+
+/* Horizontal spacing */
+$uni-spacing-row-sm: 10px;
+$uni-spacing-row-base: 20upx;
+$uni-spacing-row-lg: 30upx;
+$uni-spacing-row-xlg: 40upx;
+
+/* Vertical spacing */
+$uni-spacing-col-sm: 8upx;
+$uni-spacing-col-base: 16upx;
+$uni-spacing-col-lg: 24upx;
+$uni-spacing-col-xlg: 32upx;
+$uni-spacing-col-xxlg: 40upx;
+
+/* Opacity */
+$uni-opacity-disabled: 0.3; // Opacity in disabled state
+
+/* Title styles */
+$uni-color-title: #2C405A; //  title color
+$uni-font-size-title:40upx;
+$uni-color-subtitle: #555555; // subtitle color
+$uni-font-size-subtitle:36upx;
+$uni-color-paragraph: #3F536E; // paragraph color
+$uni-font-size-paragraph:30upx;

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="online booking site" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!--
+      UIkit drives the wizard (uk-tab / uk-switcher), the offcanvas, the modals
+      and the icons, and the components call the `UIkit` global imperatively —
+      see src/composables/wizard.js.
+
+      Vegetable.Obs pinned 3.0.0-beta.42 in nuxt.config.js; this is the current
+      3.x line, whose tab/switcher/offcanvas/modal APIs are unchanged from that
+      beta. vegetable.web loaded no UIkit at all — its Razor layout
+      (Views/Shared/_PersonalPage.cshtml) included only Bootstrap — so every
+      `UIkit.*` call in that app threw.
+    -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/css/uikit.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/js/uikit-icons.min.js"></script>
+    <title>Vegetable - online booking</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

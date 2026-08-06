@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+# Covers .env.local, .env.development.local, .env.production.local — the
+# per-developer overrides. .env.example stays tracked as the template.
+.env*.local
+*.log
+
+# uni-app build output
+unpackage/

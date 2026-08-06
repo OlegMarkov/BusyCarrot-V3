@@ -1,0 +1,285 @@
+/*
+ * Shared app classes.
+ *
+ * Restyled onto the Industry design system: every value that used to be a
+ * uni.scss token or a literal is now a `var(--…)` from styles/industry.scss.
+ * The class names are unchanged, which is what carries the new look into the
+ * 22 pages the redesign does not draw explicitly — they are all built from
+ * these, from uni-list-item and from uni-nav-bar.
+ */
+
+.menu-title {
+	padding-top: 40px;
+	padding-left: 15px;
+	padding-bottom: 8px;
+}
+.menu-title_text {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 30px;
+}
+.menu-subtitle {
+	padding: 8px 15px;
+}
+.menu-subtitle_text {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 22px;
+}
+.menu-item {
+	padding: 2.5px 15px;
+}
+.menu-no-items_text {
+	padding: 2.5px 15px;
+	color: var(--color-neutral-600);
+}
+.flex {
+	flex: 1;
+}
+.flex-row {
+	flex-direction: row;
+}
+.flex-column {
+	flex-direction: column;
+}
+.bottom-border {
+	border-bottom-color: var(--color-divider);
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+}
+.bottom-padding {
+	padding-bottom: 8px;
+}
+.form {
+	margin: 20px;
+}
+
+.input-desc {
+	font-family: var(--font-body);
+	font-size: 11.5px;
+	line-height: 1.4;
+	color: var(--color-neutral-600);
+}
+
+/* Industry draws a field label as a 10px uppercase micro-label, not a 15px
+   grey line. */
+.input-label {
+	margin-bottom: 5px;
+	font-family: var(--font-body);
+	font-size: 10px;
+	line-height: 1.4;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--color-text-70);
+}
+
+/* ...and a field value as a bordered surface, not an underline. */
+.input-text {
+	min-height: 44px;
+	padding: 6px 10px;
+	font-family: var(--font-body);
+	font-size: 15px;
+	color: var(--color-text);
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	box-sizing: border-box;
+	justify-content: center;
+}
+
+.input-textarea {
+	font-family: var(--font-body);
+	font-size: 15px;
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	color: var(--color-text);
+	margin-bottom: 10px;
+	padding: 10px;
+	height: 125px;
+}
+
+.input-error {
+	border-color: var(--color-danger);
+}
+
+.validation-message {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--color-danger);
+	margin-top: 4px;
+}
+
+.form-base-text {
+	font-family: var(--font-body);
+	font-size: 15px;
+}
+
+/* The free-time chips on reservation/edit. Square and hairline — the system
+   has no rounded chips. */
+.pill {
+	padding: 4px 10px;
+	text-align: center;
+	text-decoration: none;
+	margin: 2px 1px;
+	border-radius: 0;
+	border-color: var(--color-warn);
+	border-style: solid;
+	border-width: 1px;
+}
+.pill-dot {
+	height: 10px;
+	width: 10px;
+	border-radius: 0;
+	border-color: var(--color-warn);
+	border-style: solid;
+	border-width: 1px;
+}
+.pill-active {
+	border-color: var(--color-accent);
+}
+.pill-text {
+	color: var(--color-text);
+	font-family: var(--font-body);
+	font-size: 13px;
+}
+
+.text-disabled {
+	color: var(--color-neutral-500);
+}
+
+.form-item {
+	margin-bottom: 20px;
+}
+.form-list {
+	justify-content: space-between;
+}
+.form-list-title {
+	font-family: var(--font-body);
+	font-size: 14px;
+}
+.overflow-hidden {
+	overflow: hidden;
+}
+.flex-one {
+	flex: 1;
+}
+.margin-left-sm {
+	margin-left: 10px;
+}
+.margin-left-lg {
+	margin-left: 15px;
+}
+
+.uni-label {
+	padding-right: 10px;
+}
+
+.dashboard-horisontal-devider {
+	height: 1px;
+	background-color: var(--color-rule);
+}
+.dashboard-text {
+	font-family: var(--font-body);
+	font-size: 13px;
+}
+.dashboard-add-icon {
+	font-size: 25px;
+	color: var(--color-neutral-600);
+}
+.dashboard-text-grey {
+	color: var(--color-neutral-600);
+}
+.dashboard-text-bold {
+	font-family: var(--font-heading);
+	font-weight: 600;
+}
+.dashboard-text-underline {
+	text-decoration: underline;
+}
+.padding-bottom-10 {
+	padding-bottom: 5px;
+}
+
+/* A dialog is a blueprint object like everything else: square and framed. */
+.modal-dialog {
+	/* #ifndef APP-NVUE */
+	display: flex;
+	flex-direction: column;
+	/* #endif */
+	padding: 14px;
+	width: 300px;
+	background-color: var(--color-bg);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+}
+
+.modal-dialog-title {
+	margin-bottom: 10px;
+	text-align: center;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 20px;
+	color: var(--color-text);
+}
+
+.modal-dialog-content {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--color-text-70);
+}
+
+.modal-dialog-group-button {
+	/* #ifndef APP-NVUE */
+	display: flex;
+	/* #endif */
+	flex-direction: row;
+	margin-top: 20px;
+}
+
+.modal-dialog-button {
+	flex: 1;
+	text-align: center;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 14px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-accent-700);
+}
+
+.captcha-container {
+	flex-direction: row;
+	justify-content: center;
+	display: flex;
+	align-items: flex-end;
+}
+
+.captcha-image {
+	width: 126px;
+	height: 52px;
+	background-size: contain;
+	flex: 1;
+	border-radius: 0;
+	border: 1px solid var(--color-divider);
+}
+
+.captcha-input {
+	flex: 1;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 18px;
+	letter-spacing: 0.12em;
+	text-align: center;
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	background-color: var(--color-surface);
+	min-height: 48px;
+}
+.captcha-input-error {
+	border: 1px solid var(--color-danger);
+}
+
+.add-button {
+	min-height: 44px;
+}

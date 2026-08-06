@@ -1,0 +1,378 @@
+/*
+ * Industry — design-system tokens and primitives, ported from
+ * _ds/industry-c7bbc332-ae54-42d1-88f2-018469ae55bf/styles.css in the
+ * "BusyCarrot mobile redesign" Claude Design project.
+ *
+ * The system's rule is that nothing hard-codes a hex, a font or a spacing
+ * number that a token already carries, so this file is the only place those
+ * values appear. Everything downstream reads `var(--…)`.
+ *
+ * Two deliberate departures from the source stylesheet, both forced by the
+ * runtime rather than chosen:
+ *
+ *  1. `color-mix()` is unwrapped into literal rgba(). The app-plus webview on
+ *     older Android is behind on CSS Color 5, and a failed color-mix() drops
+ *     the whole declaration rather than degrading — divider lines would simply
+ *     vanish. The values below are the mixes pre-computed against
+ *     --color-text #1d1f20 and the #f2f2f3 ground.
+ *  2. Fonts are loaded by `uni.loadFontFace` in App.vue for app-plus, since a
+ *     webfont `@import` only resolves on H5. See loadIndustryFonts().
+ */
+
+:root {
+	--color-bg: #f2f2f3;
+	--color-surface: #e9e9ea;
+	--color-text: #1d1f20;
+	--color-accent: #5980a6;
+
+	/* color-mix(in srgb, #1d1f20 16%, transparent) */
+	--color-divider: rgba(29, 31, 32, 0.16);
+	/* the two lighter rules the doc uses for list separators */
+	--color-rule: rgba(29, 31, 32, 0.08);
+	--color-rule-soft: rgba(29, 31, 32, 0.07);
+	/* color-mix(in srgb, var(--color-text) 55%, transparent) */
+	--color-text-muted: rgba(29, 31, 32, 0.55);
+	--color-text-70: rgba(29, 31, 32, 0.7);
+
+	--color-neutral-100: #f5f5f8;
+	--color-neutral-200: #e7e7ea;
+	--color-neutral-300: #d4d4d7;
+	--color-neutral-400: #b7b7ba;
+	--color-neutral-500: #98989b;
+	--color-neutral-600: #7a7a7d;
+	--color-neutral-700: #5d5d60;
+	--color-neutral-800: #424244;
+	--color-neutral-900: #2b2b2d;
+
+	--color-accent-100: #eef6ff;
+	--color-accent-200: #d6ebff;
+	--color-accent-300: #b5d9fd;
+	--color-accent-400: #94bce3;
+	--color-accent-500: #749dc4;
+	--color-accent-600: #597ea3;
+	--color-accent-700: #416180;
+	--color-accent-800: #2c455d;
+	--color-accent-900: #1d2d3d;
+
+	/* The one warm tone in the system: the doc uses it for "out of the
+	   schedule" and the destructive action, nowhere else. */
+	--color-warn: #a8791f;
+	--color-danger: #8f4741;
+
+	--font-heading: 'Barlow Condensed', system-ui, sans-serif;
+	--font-body: 'Barlow', system-ui, sans-serif;
+
+	--space-1: 3.4px;
+	--space-2: 6.8px;
+	--space-3: 10.2px;
+	--space-4: 13.6px;
+	--space-6: 20.4px;
+	--space-8: 27.2px;
+
+	--radius-md: 4px;
+
+	--shadow-lg: 0 12px 32px rgba(43, 43, 45, 0.22);
+}
+
+/*
+ * The blueprint frame — the wireframe object every card, figure and primary
+ * button wears. Square, transparent, hairline-bordered, with a "+"
+ * registration mark at each corner.
+ *
+ * The marks are drawn with ::before/::after on four <text class="corner">
+ * children rather than on the frame itself, because a single element only has
+ * two pseudo-elements and each mark needs a cross.
+ */
+.blueprint {
+	position: relative;
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+}
+
+.corner {
+	position: absolute;
+	width: 11px;
+	height: 11px;
+	color: var(--color-text-muted);
+}
+
+.corner::before,
+.corner::after {
+	content: '';
+	position: absolute;
+	background-color: currentColor;
+}
+
+.corner::before {
+	left: 5px;
+	top: 0;
+	width: 1px;
+	height: 100%;
+}
+
+.corner::after {
+	top: 5px;
+	left: 0;
+	width: 100%;
+	height: 1px;
+}
+
+.corner.tl {
+	top: -6px;
+	left: -6px;
+}
+.corner.tr {
+	top: -6px;
+	right: -6px;
+}
+.corner.bl {
+	bottom: -6px;
+	left: -6px;
+}
+.corner.br {
+	bottom: -6px;
+	right: -6px;
+}
+
+/* — type — */
+
+.ind-h {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	line-height: 1.12;
+	letter-spacing: -0.015em;
+	color: var(--color-text);
+}
+
+/* The system's small all-caps label: kickers, column heads, tab labels. */
+.ind-kicker {
+	font-family: var(--font-body);
+	font-size: 10px;
+	line-height: 1;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--color-neutral-600);
+}
+
+.ind-muted {
+	color: var(--color-text-muted);
+}
+
+/* — buttons — */
+
+.btn {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 14px;
+	line-height: 1.2;
+	color: var(--color-text);
+	background-color: transparent;
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	padding: var(--space-2) 12px;
+	/* uni-app <button> ships a rounded grey chrome of its own. */
+	margin: 0;
+	overflow: visible;
+}
+
+.btn::after {
+	border: none;
+}
+
+.btn-primary {
+	background-color: var(--color-accent);
+	border-color: var(--color-accent);
+	color: var(--color-bg);
+}
+
+.btn-primary:active {
+	background-color: var(--color-accent-700);
+	border-color: var(--color-accent-700);
+}
+
+.btn-secondary:active {
+	background-color: rgba(29, 31, 32, 0.14);
+}
+
+.btn-danger {
+	color: var(--color-danger);
+	border-color: rgba(143, 71, 65, 0.4);
+}
+
+.btn-block {
+	width: 100%;
+}
+
+.btn[disabled] {
+	opacity: 0.45;
+}
+
+/* — tags — */
+
+.tag {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-body);
+	font-size: 11px;
+	letter-spacing: 0.02em;
+	padding: 3px 10px;
+	border-radius: 0;
+}
+
+.tag-accent {
+	background-color: var(--color-accent-100);
+	color: var(--color-accent-800);
+}
+
+.tag-neutral {
+	background-color: var(--color-neutral-100);
+	color: var(--color-neutral-800);
+}
+
+.tag-outline {
+	border: 1px solid var(--color-accent);
+	color: var(--color-accent);
+}
+
+/* — forms — */
+
+.field {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: var(--space-4);
+}
+
+.field-label {
+	font-family: var(--font-body);
+	font-size: 10px;
+	line-height: 1.4;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--color-text-70);
+	margin-bottom: 5px;
+}
+
+.input {
+	min-height: 44px;
+	padding: 6px 10px;
+	font-family: var(--font-body);
+	font-size: 15px;
+	color: var(--color-text);
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	box-sizing: border-box;
+}
+
+.input-error {
+	border-color: var(--color-danger);
+}
+
+.validation-message {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--color-danger);
+	margin-top: 4px;
+}
+
+/* Segmented control — the language switch, and the picker rows generally. */
+.seg {
+	display: flex;
+	flex-direction: row;
+	border: 1px solid var(--color-divider);
+	border-radius: 0;
+	overflow: hidden;
+}
+
+.seg-opt {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0 22px;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 13px;
+	letter-spacing: 0.08em;
+	color: var(--color-text);
+}
+
+.seg-opt--active {
+	background-color: var(--color-accent);
+	color: var(--color-bg);
+}
+
+.seg-opt + .seg-opt {
+	border-left: 1px solid var(--color-divider);
+}
+
+/* — the accent-900 plate —
+   The one place the system allows a full colour field: steel as ground with
+   type reversed to paper. Carries the day header and the schedule header. */
+.plate {
+	background-color: var(--color-accent-900);
+	color: #f2f2f3;
+}
+
+.plate-kicker {
+	font-family: var(--font-body);
+	font-size: 10px;
+	line-height: 1;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	opacity: 0.62;
+}
+
+.plate-figure {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	line-height: 0.95;
+}
+
+/* — list rows —
+   The doc draws list separators as a hairline under each row rather than as a
+   card edge; rows are transparent. */
+.ind-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 11px 2px;
+	border-bottom: 1px solid var(--color-rule);
+}
+
+.ind-row__title {
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 15px;
+	line-height: 1.25;
+	color: var(--color-text);
+}
+
+.ind-row__note {
+	font-family: var(--font-body);
+	font-size: 11.5px;
+	line-height: 1.4;
+	color: var(--color-neutral-600);
+}
+
+/* The initials box on a client row: a framed square, not an avatar circle. */
+.ind-initials {
+	width: 38px;
+	height: 38px;
+	flex-shrink: 0;
+	border: 1px solid var(--color-divider);
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	font-size: 13px;
+	letter-spacing: 0.04em;
+	color: var(--color-accent-700);
+}

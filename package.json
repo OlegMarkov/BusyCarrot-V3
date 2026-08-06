@@ -1,0 +1,20 @@
+{
+  "name": "vegetable.vue3",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mock:api": "node tools/mock-owner-api.mjs",
+    "dev:admin": "npm run dev --workspace apps/admin",
+    "dev:obs": "npm run dev --workspace apps/obs",
+    "dev:mobile": "npm run dev:h5 --workspace apps/mobile",
+    "dev:mobile:app": "npm run dev:app --workspace apps/mobile",
+    "build:admin": "npm run build --workspace apps/admin",
+    "build:obs": "npm run build --workspace apps/obs",
+    "build:mobile": "npm run build:app --workspace apps/mobile",
+    "build": "npm run build:admin && npm run build:obs && npm run build:mobile"
+  }
+}

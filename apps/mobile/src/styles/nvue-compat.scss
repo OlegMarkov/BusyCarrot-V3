@@ -1,0 +1,127 @@
+/*
+ * nvue → vue layout compatibility.
+ *
+ * The original app rendered 46 of its pages/components through nvue (weex).
+ * Weex applies a flexbox box model to *every* element by default, which the
+ * webview renderer used by `.vue` does not:
+ *
+ *   - display: flex          (webview default: block)
+ *   - flex-direction: column (webview default: row)
+ *   - flex-shrink: 0         (webview default: 1 — items get squashed)
+ *   - position: relative     (webview default: static)
+ *   - box-sizing: border-box (webview default: content-box)
+ *
+ * Rather than hand-editing the layout of every converted file, converted files
+ * carry `class="nv"` on their root element and inherit the weex defaults from
+ * here. Files that were already `.vue` in the original are deliberately NOT
+ * affected — they were authored against the webview renderer and already say
+ * `display: flex` where they need it (see .captcha-container in vegetable.scss).
+ *
+ * ---------------------------------------------------------------------------
+ * Why `display` is declared separately, and why the selectors look odd
+ * ---------------------------------------------------------------------------
+ * These are *defaults*, so the natural expression is `:where()`, which has zero
+ * specificity and loses to anything a component declares for itself.
+ *
+ * That does not work for `display`. uni-app's own base stylesheet ships
+ * `uni-view { display: block }` — specificity (0,0,1) — which outranks a
+ * (0,0,0) `:where()` rule. Declaring `display: flex` inside the `:where()`
+ * block below therefore had no effect at all: measured on the dashboard, 325 of
+ * the 665 elements inside converted subtrees were still laid out as blocks, and
+ * 17 of the 24 `.nv` roots with them. Column layouts happened to survive
+ * (block stacking looks the same); rows, `flex: 1` sizing and `align-items`
+ * did not.
+ *
+ * So `display` is repeated below at just enough weight to beat that base rule:
+ *
+ *   - on the root, plain `.nv` — (0,1,0). Nothing overrides its own root's
+ *     display, and these roots were all flex containers under weex.
+ *   - on descendants, `:not(nv-never)` adds (0,0,1) to the element selector,
+ *     giving (0,0,2). That beats `uni-view` (0,0,1) and still loses to any
+ *     component class selector (0,1,0), which is the behaviour we want.
+ *     `nv-never` is not a real element; the `:not()` matches everything and
+ *     exists only to carry specificity.
+ *
+ * Every other property stays at (0,0,0), so a component saying
+ * `flex-direction: row` still wins.
+ */
+
+/*
+ * A weex page fills the screen: the nvue root was the viewport, so a root view
+ * saying `flex: 1` filled it. The webview renderer's page body is a plain
+ * auto-height block, so `flex: 1` on a converted root had nothing to fill and
+ * collapsed — on the dashboard the swiper measured 0px tall and the whole day
+ * list was invisible, with the page body 45px high (just the nav bar).
+ *
+ * `min-height` rather than `height` so that pages taller than the screen still
+ * grow and scroll normally.
+ */
+page {
+	min-height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/*
+ * ...but a converted page whose root is a full-height flex column scrolls
+ * *inside* itself: it holds a `<scroll-view>` with `flex: 1`, the way the nvue
+ * original held a `<list>`. Those must be bounded to the viewport — under
+ * `min-height` alone the scroll-view simply grew to fit its rows (measured
+ * 1925px for 25 customers), so it never became a scroller, `@scrolltolower`
+ * never fired, and the list was stuck on its first page forever.
+ *
+ * Pages whose root is not a flex column — the settings forms, which were
+ * always meant to scroll as a page — keep `min-height` and grow.
+ */
+page:has(> .nv.flex-column) {
+	height: 100%;
+}
+
+:where(.nv),
+:where(.nv) view,
+:where(.nv) swiper-item,
+:where(.nv) scroll-view,
+:where(.nv) cover-view,
+:where(.nv) form,
+:where(.nv) label {
+	flex-direction: column;
+	align-content: flex-start;
+	flex-shrink: 0;
+	box-sizing: border-box;
+	position: relative;
+}
+
+.nv {
+	display: flex;
+}
+
+:where(.nv) view:not(nv-never),
+:where(.nv) swiper-item:not(nv-never),
+:where(.nv) scroll-view:not(nv-never),
+:where(.nv) cover-view:not(nv-never),
+:where(.nv) form:not(nv-never),
+:where(.nv) label:not(nv-never) {
+	display: flex;
+}
+
+/*
+ * Weex `<text>` is a leaf box, not inline content: two <text> siblings inside a
+ * column container stack. Being flex items of the rules above already gives us
+ * that, so <text> only needs the box model — not display:flex, which would
+ * break its own text wrapping.
+ */
+:where(.nv) text {
+	flex-shrink: 0;
+	box-sizing: border-box;
+	position: relative;
+}
+
+/*
+ * `.flex`, `.flex-row` and `.flex-column` in vegetable.scss set flex properties
+ * without `display: flex`, because under nvue that was implied. Anywhere those
+ * classes are used outside a converted file they still need it spelled out.
+ */
+.flex-row,
+.flex-column {
+	display: flex;
+}
