@@ -258,7 +258,10 @@
     "no-image": "No image",
     "month": "Month",
     "deleteOwner": "Delete account",
-    "deleteOwnerMessage": "You are about to delete whole account data without the possibility to restore it. Are you sure you want to delete your Account?"
+    "deleteOwnerMessage": "You are about to delete whole account data without the possibility to restore it. Are you sure you want to delete your Account?",
+    "services": "Services",
+    "time": "Time",
+    "message": "Message"
   },
   "menu": {
     "title": "BusyCarrot app",
@@ -278,7 +281,8 @@
     "lastName": "Last name",
     "description": "Description",
     "startOfWorkDate": "Start date with current employer",
-    "endOfWorkDate": "End date of work with current employer"
+    "endOfWorkDate": "End date of work with current employer",
+    "title": "Employee"
   },
   "service": {
     "new": "New service",
@@ -316,7 +320,9 @@
     "send-confirmation-sms-no-chatId": "Send reservation link via sms",
     "send-confirmation-sms": "Send reservation link via sms",
     "share-reservation-message": "Hello, you have a reservation: ",
-    "share-reservation-message-details": "Reservation details: "
+    "share-reservation-message-details": "Reservation details: ",
+    "confirm": "Confirm booking",
+    "more-options": "More options"
   },
   "customer": {
     "new": "New customer",
@@ -345,7 +351,8 @@
     "share-tlg-invite-message": "Please join our Telegram bot for notifications: ",
     "send-confirmation-sms": "Send reservation link via sms",
     "send-confirmation-sms-description-no-chatId": "After creating reservation popup will be dispayed to share reservation link with customer via sms/social media.",
-    "send-confirmation-sms-description": "After creating reservation popup will be dispayed to share reservation link with client via sms/social media. This customer already subscribed for our Telegram bot it means that reservation link will be sent automatically to this customer after reservation will be completed."
+    "send-confirmation-sms-description": "After creating reservation popup will be dispayed to share reservation link with client via sms/social media. This customer already subscribed for our Telegram bot it means that reservation link will be sent automatically to this customer after reservation will be completed.",
+    "no-customers": "No clients yet"
   },
   "onboarding": {
     "welcome-step-header": "Welcome to ",

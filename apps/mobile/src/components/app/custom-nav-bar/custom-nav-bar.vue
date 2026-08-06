@@ -75,8 +75,10 @@ export default {
     leftIcon: { type: String, default: '' },
     rightIcon: { type: String, default: '' },
     fixed: { type: [Boolean, String], default: false },
-    color: { type: String, default: '#000000' },
-    backgroundColor: { type: String, default: '#FFFFFF' },
+    color: { type: String, default: 'var(--color-text)' },
+    // The bar sits on the page ground, not on white: Industry has no raised
+    // chrome. Tokens rather than literals so a re-theme carries.
+    backgroundColor: { type: String, default: 'var(--color-bg)' },
     statusBar: { type: [Boolean, String], default: false },
     shadow: { type: [Boolean, String], default: false },
     border: { type: [Boolean, String], default: true }
@@ -90,7 +92,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-$nav-height: 44px;
+// 48px is the design's nav height.
+$nav-height: 48px;
 
 .uni-nav-bar-text {
   font-size: 34rpx;
@@ -98,7 +101,7 @@ $nav-height: 44px;
 
 .uni-navbar__content {
   position: relative;
-  background-color: $uni-bg-color;
+  background-color: var(--color-bg);
   overflow: hidden;
 }
 
@@ -169,8 +172,8 @@ $nav-height: 44px;
 }
 
 .uni-navbar--border {
-  border-bottom-width: 1rpx;
+  border-bottom-width: 1px;
   border-bottom-style: solid;
-  border-bottom-color: $uni-border-color;
+  border-bottom-color: var(--color-divider);
 }
 </style>

@@ -55,6 +55,7 @@ import { useCustomerStore } from '@/stores/customer'
 import { useOwnerStore } from '@/stores/owner'
 import { useReservationStore } from '@/stores/reservation'
 import { sendSms } from '@/plugins/native'
+import { openSheet } from '@/plugins/sheet-bus'
 
 /**
  * Ported from
@@ -146,8 +147,9 @@ export default {
     }
   },
   methods: {
+    /** Tapping a booking opens its sheet; the sheet's Edit reaches the form. */
     edit() {
-      uni.navigateTo({ url: `/pages/reservation/edit?id=${this.reservation.id}` })
+      openSheet('detail', { reservationId: this.reservation.id })
     },
 
     longpress() {

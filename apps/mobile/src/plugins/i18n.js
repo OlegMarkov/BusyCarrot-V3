@@ -85,6 +85,12 @@ export function updateTabBarText() {
     'menu.tab-settings'
   ]
   keys.forEach((key, index) => {
-    uni.setTabBarItem({ index, text: t(key) })
+    // `setTabBarItem` rejects with "not TabBar page" whenever the current page
+    // is not one of the five tabs — which is the case at boot, and on the login
+    // and edit screens. That is a benign condition, not a failure, but without
+    // a handler each call surfaces as an uncaught rejection and buries real
+    // errors in the console.
+    const result = uni.setTabBarItem({ index, text: t(key) })
+    if (result && typeof result.catch === 'function') result.catch(() => {})
   })
 }

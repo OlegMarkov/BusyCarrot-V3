@@ -283,7 +283,14 @@ const GETS = [
   [/^owner\/schedule/, () => SCHEDULES[0]],
   [/^owner\/reservation\/countbydays$/, () => ({ [day(-1)]: 1, [day(0)]: 3, [day(1)]: 1 })],
   [/^owner\/reservation\/costbymonth$/, () => ({ 1: 12000, 2: 18000, 3: 9000, 4: 22000 })],
-  [/^owner\/reservation\/r\/[^/]+$/, (p) => RESERVATIONS.find((r) => r.id === last(p)) || RESERVATIONS[0]],
+  // The empty guid is how the client asks for a blank template to start a new
+  // booking from. Falling back to a real record here is not a harmless default:
+  // the client spreads what it gets, so it would inherit that record's id and
+  // the create would silently become an update.
+  [
+    /^owner\/reservation\/r\/[^/]+$/,
+    (p) => RESERVATIONS.find((r) => r.id === last(p)) || blank('reservation')
+  ],
   [/^owner\/reservation/, () => RESERVATIONS],
   [/^owner\/customer\/all$/, () => CUSTOMERS],
   [/^owner\/customer\/sharelink/, () => ({ link: 'https://busycarrot.com/c/abc123' })],
@@ -309,6 +316,20 @@ function blank(kind) {
   const common = { id: '', ownerId: OWNER_ID }
   if (kind === 'employee') return { ...common, firstName: '', lastName: '', phone: '', email: '', color: 'green' }
   if (kind === 'service') return { ...common, title: '', description: '', cost: 0, durationInMinutes: 30, currencyCode: 'RUB', color: 'green' }
+  if (kind === 'reservation')
+    return {
+      ...common,
+      startTime: null,
+      endTime: null,
+      cost: 0,
+      customerId: null,
+      employeeId: null,
+      isConfirmed: false,
+      reservationType: 0,
+      remindInMin: 0,
+      reservationServices: [],
+      images: []
+    }
   return { ...common, firstName: '', lastName: '', phone: '', email: '', notes: '' }
 }
 

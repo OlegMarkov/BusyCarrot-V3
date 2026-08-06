@@ -1,9 +1,15 @@
 <template>
   <view v-if="accessToken" class="nv flex flex-column" style="align-content: stretch">
-    <custom-nav-bar ref="navBar" status-bar="true" @clickRight="backToToday">
+    <custom-nav-bar ref="navBar" status-bar="true">
+      <!--
+        The design gives the bar one bordered button at each end: today/reset on
+        the left, the locale on the right. "Reset" here does both jobs the two
+        old buttons did — returns to today *and* refetches — so nothing is lost
+        by collapsing them into the one control the design draws.
+      -->
       <template #left>
         <is-busy-indicator v-if="apiCallsAll" :loading="apiCallsAll" />
-        <view v-else class="nav-box" @click="refresh">
+        <view v-else class="nav-box" @click="resetToToday">
           <uni-icons type="refresh" :size="17" color="#1d1f20" />
         </view>
       </template>
@@ -14,8 +20,8 @@
       </view>
 
       <template #right>
-        <view class="nav-box" @click="backToToday">
-          <uni-icons type="calendar" :size="17" color="#1d1f20" />
+        <view class="nav-box" @click="cycleLocale">
+          <text class="nav-box__locale">{{ localeLabel }}</text>
         </view>
       </template>
     </custom-nav-bar>
@@ -37,6 +43,22 @@
       </view>
       <text style="text-align: center">{{ $t('hints.old-version') }}</text>
     </view>
+
+    <!--
+      The sheets live at page level: a day row is inside a <swiper-item>, which
+      clips anything that tries to cover the screen from in there.
+    -->
+    <new-reservation-sheet
+      v-model="newSheet"
+      :date="sheetDate"
+      :start-time="sheetStartTime"
+      @created="onReservationChanged"
+    />
+    <booking-detail-sheet
+      v-model="detailSheet"
+      :reservation-id="sheetReservationId"
+      @deleted="onReservationChanged"
+    />
   </view>
 </template>
 
@@ -46,6 +68,8 @@ import { mapState } from 'pinia'
 import customNavBar from '@/components/app/custom-nav-bar/custom-nav-bar.vue'
 import weekStrip from '@/components/app/week-strip.vue'
 import dashboardList from '@/components/app/dashboard/dashboard-list.vue'
+import newReservationSheet from '@/components/app/dashboard/new-reservation-sheet.vue'
+import bookingDetailSheet from '@/components/app/dashboard/booking-detail-sheet.vue'
 import isBusyIndicator from '@/components/app/is-busy-indicator.vue'
 import uniIcons from '@/components/ui/uni-icons/uni-icons.vue'
 import { useAppStore } from '@/stores/app'
@@ -54,8 +78,9 @@ import { useOwnerStore } from '@/stores/owner'
 import { useSettingsStore } from '@/stores/settings'
 import { useReservationStore } from '@/stores/reservation'
 import { capitalize } from '@/plugins/helpers'
-import { tArray } from '@/plugins/i18n'
+import { tArray, LANGUAGES, getLocale } from '@/plugins/i18n'
 import { publishDate, subscribeDate } from '@/plugins/date-bus'
+import { subscribeSheet } from '@/plugins/sheet-bus'
 import { getPushClientId, appVersion, isIOS } from '@/plugins/native'
 
 /**
@@ -82,17 +107,30 @@ import { getPushClientId, appVersion, isIOS } from '@/plugins/native'
  *    `getLocaleIndex` (no locale picker in this template) is gone
  */
 export default {
-  components: { customNavBar, weekStrip, dashboardList, isBusyIndicator, uniIcons },
+  components: {
+    customNavBar,
+    weekStrip,
+    dashboardList,
+    isBusyIndicator,
+    uniIcons,
+    newReservationSheet,
+    bookingDetailSheet
+  },
   data() {
     return {
       date: '',
-      listHeight: 400
+      listHeight: 400,
+      newSheet: false,
+      detailSheet: false,
+      sheetDate: '',
+      sheetStartTime: '',
+      sheetReservationId: ''
     }
   },
   computed: {
     ...mapState(useUserStore, ['accessToken', 'userDb']),
     ...mapState(useAppStore, ['isBusy', 'tabIndex', 'apiCallsAll']),
-    ...mapState(useSettingsStore, ['hints', 'applicationSettings']),
+    ...mapState(useSettingsStore, ['hints', 'applicationSettings', 'language']),
     ...mapState(useOwnerStore, ['owner']),
 
     navText() {
@@ -103,6 +141,11 @@ export default {
         return `${capitalize(tArray('calendar.monthsShort')[mdate.month()])}, ${mdate.year()}`
       }
       return capitalize(tArray('calendar.months')[mdate.month()])
+    },
+
+    /** Reads the store rather than getLocale() so the button re-renders on change. */
+    localeLabel() {
+      return (this.language || getLocale()).toUpperCase()
     },
 
     /** The design's nav carries the business under the month. */
@@ -169,10 +212,24 @@ export default {
     this.unsubscribe = subscribeDate('index', (date) => {
       this.date = date
     })
+
+    this.unsubscribeSheet = subscribeSheet((kind, payload) => {
+      if (kind === 'new') {
+        this.sheetDate = payload.date || this.date
+        this.sheetStartTime = payload.startTime || ''
+        this.newSheet = true
+        return
+      }
+      if (kind === 'detail') {
+        this.sheetReservationId = payload.reservationId
+        this.detailSheet = true
+      }
+    })
   },
 
   onUnload() {
     this.unsubscribe?.()
+    this.unsubscribeSheet?.()
   },
 
   onTabItemTap(item) {
@@ -221,6 +278,30 @@ export default {
       reservations.fetchReservationsTotalCostByMonth()
     },
 
+    /** Refetch the day after a sheet creates or deletes a booking. */
+    onReservationChanged() {
+      useReservationStore().fetchReservations()
+      this.refresh()
+    },
+
+    /** The nav bar's left button: the design's "today / reset", both jobs. */
+    resetToToday() {
+      this.backToToday()
+      this.refresh()
+    },
+
+    /**
+     * The design puts the locale in the nav bar rather than only in Settings.
+     * Two languages, so the button steps rather than opening a picker; the
+     * Settings control is unchanged and stays in sync through the store.
+     */
+    cycleLocale() {
+      const next = LANGUAGES[(LANGUAGES.indexOf(getLocale()) + 1) % LANGUAGES.length]
+      // The same action the Settings picker calls, so the two stay in step and
+      // the native tab bar gets relabelled either way.
+      useSettingsStore().upsertLanguage(next)
+    },
+
     /** Returns > 0 when `a` is newer than `b`. Both are dotted version strings. */
     compareVersions(a, b) {
       const left = String(a).split('.').map(Number)
@@ -267,6 +348,15 @@ export default {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-divider);
+}
+
+.nav-box__locale {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
 }
 
 .hint {

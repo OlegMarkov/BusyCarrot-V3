@@ -52,6 +52,7 @@ import { useReservationStore } from '@/stores/reservation'
 import { useOwnerStore } from '@/stores/owner'
 import { format } from '@/plugins/helpers'
 import { tArray } from '@/plugins/i18n'
+import { openSheet } from '@/plugins/sheet-bus'
 
 const SCHEDULE_TYPE_CUSTOM = 2
 
@@ -175,9 +176,14 @@ export default {
     }
   },
   methods: {
+    /**
+     * The design books from a sheet rather than a pushed page. The sheet is
+     * rendered by pages/index — a sheet opened from here would be clipped by
+     * the swiper this day sits in — so the tap is announced, not handled.
+     * "More options" inside the sheet still reaches the full form.
+     */
     addReservation(time) {
-      const timeParam = time ? `&time=${moment(time).format('HH:mm')}` : ''
-      uni.navigateTo({ url: `/pages/reservation/edit?date=${this.date}${timeParam}` })
+      openSheet('new', { date: this.date, startTime: time || '' })
     },
 
     scheduleTimeClick() {
