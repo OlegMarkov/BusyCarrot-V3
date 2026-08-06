@@ -243,4 +243,21 @@ watch(
   font: 400 11.5px var(--font-body);
   color: var(--color-neutral-600);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px — the design's single breakpoint.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .page {
+    flex-direction: column;
+    gap: 22px;
+    padding: 14px 14px 26px;
+  }
+
+  .page__main,
+  .page__side {
+    width: 100%;
+    max-width: none;
+  }
+}
 </style>

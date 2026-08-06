@@ -112,4 +112,34 @@ function close() {
   text-transform: uppercase;
   font-size: 11px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px the editors present as bottom sheets, the same way the
+   calendar's rail does — the design's mobile container for a modal.
+   Scoped styles cannot reach the teleported backdrop's own rules, so the
+   backdrop is realigned from :deep() on the element this component owns.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .app-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: 88vh;
+    max-height: 88dvh;
+    margin: 0;
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+</style>
+
+<style>
+/* Unscoped: `.dialog-backdrop` comes from the design system's stylesheet and is
+   teleported outside this component's tree, so a scoped rule would not apply.
+   Kept to the one property that has to change — how the panel is parked. */
+@media (max-width: 1023.98px) {
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
 </style>

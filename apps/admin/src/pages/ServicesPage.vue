@@ -176,4 +176,33 @@ const rows = computed(() =>
   text-transform: uppercase;
   font-size: 11px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px — the design's single breakpoint.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .page {
+    padding: 14px 14px 26px;
+  }
+
+  .page__head,
+  .page__table {
+    max-width: none;
+  }
+
+  th.col-n,
+  th.col-booked,
+  .cell-n,
+  .cell-booked {
+    display: none;
+  }
+
+  .cell-title {
+    font-size: 14px;
+  }
+
+  .page__add {
+    width: 100%;
+  }
+}
 </style>

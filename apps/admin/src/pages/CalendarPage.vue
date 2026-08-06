@@ -16,7 +16,27 @@
       <button class="btn btn-secondary topbar-btn" @click="goToday">{{ t('calendar.today') }}</button>
     </template>
 
+    <!--
+      Below the breakpoint the seven-column grid has no width to be read in, so
+      the same day is drawn as a timeline under a week strip — the design's
+      mobile Day screen. Both are fed by the identical `columns`.
+    -->
+    <div v-if="isMobile" class="day">
+      <week-strip :columns="columns" :active-key="activeKey" @pick-day="pickDay" />
+      <day-plate v-bind="plateProps" />
+      <day-timeline
+        :column="activeColumn"
+        :selected-id="selectedId"
+        :closed-label="t('calendar.dayOff')"
+        :empty-label="t('calendar.noBookings')"
+        :add-label="t('calendar.addReservation')"
+        @new-booking="startNew"
+        @select="selectBooking"
+      />
+    </div>
+
     <time-grid
+      v-else
       :columns="columns"
       :active-key="activeKey"
       :selected-id="selectedId"
@@ -26,20 +46,13 @@
       @select="selectBooking"
     />
 
-    <!-- ── right rail ── -->
-    <aside class="rail">
-      <div class="rail__plate">
-        <div>
-          <div class="rail__kicker">{{ activeDay.format('dddd') }}</div>
-          <div class="rail__date">{{ bigDate }}</div>
-          <div class="rail__hours">{{ hoursLine }}</div>
-        </div>
-        <div class="rail__money">
-          <div class="rail__kicker">{{ t('calendar.today') }}</div>
-          <div class="rail__total">{{ money(dayTotal) }}</div>
-          <div class="rail__month">{{ t('calendar.month') }} {{ money(monthTotal) }}</div>
-        </div>
-      </div>
+    <!-- The mobile sheet is dismissable; the desktop rail is not. -->
+    <div v-if="isMobile && rail !== 'summary'" class="sheet-scrim" @click="closeRail" />
+
+    <!-- ── right rail / bottom sheet ── -->
+    <aside v-if="!isMobile || rail !== 'summary'" class="rail" :class="{ 'rail--sheet': isMobile }">
+      <!-- On mobile the day header is above the timeline, not in the sheet. -->
+      <day-plate v-if="!isMobile" v-bind="plateProps" />
 
       <div class="rail__body">
         <!-- summary -->
@@ -175,8 +188,12 @@ import moment from 'moment'
 import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/AppShell.vue'
 import TimeGrid from '@/components/calendar/TimeGrid.vue'
+import WeekStrip from '@/components/calendar/WeekStrip.vue'
+import DayTimeline from '@/components/calendar/DayTimeline.vue'
+import DayPlate from '@/components/calendar/DayPlate.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import { useDayColumns, fromMinutes, formatDuration } from '@/composables/useDayColumns'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import { useReservationStore } from '@/stores/reservation'
 import { useScheduleStore } from '@/stores/schedule'
 import { useCustomerStore } from '@/stores/customer'
@@ -185,6 +202,7 @@ import { useEmployeeStore } from '@/stores/employee'
 import { useOwnerStore } from '@/stores/owner'
 
 const { t } = useI18n()
+const { isMobile } = useBreakpoint()
 
 const reservations = useReservationStore()
 const schedules = useScheduleStore()
@@ -203,7 +221,9 @@ const activeDay = computed(() => moment(activeKey.value))
 
 /** Week runs from the locale's own first day, so it is Monday-first in ru. */
 const days = computed(() => {
-  if (view.value === 'day') return [activeDay.value]
+  // Mobile always keeps the full week loaded: it shows one day at a time, but
+  // the week strip needs seven cells and their booking marks.
+  if (view.value === 'day' && !isMobile.value) return [activeDay.value]
   const start = activeDay.value.clone().startOf('week')
   return Array.from({ length: 7 }, (_, i) => start.clone().add(i, 'days'))
 })
@@ -230,6 +250,17 @@ const hoursLine = computed(() => {
 })
 
 const dayTotal = computed(() => activeColumn.value?.total ?? 0)
+
+/** The day header, shown in the rail on desktop and above the timeline on mobile. */
+const plateProps = computed(() => ({
+  weekday: activeDay.value.format('dddd'),
+  date: bigDate.value,
+  hours: hoursLine.value,
+  total: money(dayTotal.value),
+  month: money(monthTotal.value),
+  todayLabel: t('calendar.today'),
+  monthLabel: t('calendar.month')
+}))
 
 const monthTotal = computed(() =>
   reservations.reservations
@@ -735,5 +766,60 @@ watch(
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 11px;
+}
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px: week strip + day plate + timeline in one column, and the rail
+   becomes a bottom sheet. Its three states are unchanged — same content, same
+   copy, different container, which is what the design asks for.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  /* The week/day switch has no meaning here: mobile always shows one day, and
+     the strip is how another is chosen. */
+  .seg {
+    display: none;
+  }
+
+  .day {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sheet-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(29, 31, 32, 0.42);
+    z-index: 40;
+  }
+
+  .rail--sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 86vh;
+    max-height: 86dvh;
+    z-index: 41;
+    background: var(--color-bg);
+    border-left: 0;
+    border-top: 1px solid var(--color-divider);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: var(--shadow-lg, 0 -12px 32px rgba(43, 43, 45, 0.22));
+  }
+
+  .rail--sheet .rail__body {
+    overflow-y: auto;
+  }
+
+  /* Chips and service rows are the sheet's tap targets; give them room. */
+  .chip {
+    min-height: 36px;
+  }
+
+  .opt {
+    padding: 11px 0;
+  }
 }
 </style>

@@ -40,12 +40,20 @@
     <div class="main">
       <header class="topbar">
         <div class="topbar__id">
+          <div class="topbar__shop">{{ ownerName }}</div>
           <h1 class="topbar__title">{{ pageTitle }}</h1>
           <div class="topbar__sub">{{ pageSub }}</div>
         </div>
         <div class="topbar__actions">
           <slot name="actions" />
         </div>
+        <!--
+          Under the breakpoint the sidebar becomes a bar of five tabs with no
+          room for the brand or the language control, so both move up here —
+          the shop name beside the title, the locale as the design's 38px
+          bordered toggle at the top right.
+        -->
+        <button class="topbar__locale" @click="cycleLocale">{{ locale.toUpperCase() }}</button>
       </header>
 
       <div class="main__body">
@@ -100,6 +108,14 @@ const navItems = computed(() => [
 
 function setLocale(next) {
   locale.value = next
+}
+
+/** The mobile toggle is one button rather than a segmented control, so it
+    steps through the available locales instead of picking one. */
+function cycleLocale() {
+  const all = availableLocales
+  const next = all[(all.indexOf(locale.value) + 1) % all.length]
+  setLocale(next)
 }
 
 /**
@@ -276,5 +292,139 @@ void props
   flex: 1;
   min-height: 0;
   display: flex;
+}
+
+/* The shop name and the locale button belong to the mobile chrome only; on
+   desktop the sidebar carries both. */
+.topbar__shop,
+.topbar__locale {
+  display: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px: the sidebar becomes a bottom tab bar and the page is one
+   column. Nothing about the navigation changes — the same five destinations,
+   the same active marker, moved to the edge a thumb can reach.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .shell {
+    flex-direction: column;
+    /* Mobile browsers report 100vh as the *unscrolled* height, so a bar pinned
+       to the bottom of 100vh sits under the address bar. dvh tracks the visible
+       viewport; the vh line stays first as the fallback. */
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* DOM order keeps the navigation before the content for assistive tech; the
+     visual order puts it last. */
+  .main {
+    order: 1;
+    min-height: 0;
+  }
+
+  .sidebar {
+    order: 2;
+    width: 100%;
+    flex-direction: row;
+    border-right: 0;
+    border-top: 1px solid var(--color-divider);
+    /* iOS home indicator */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .sidebar__brand,
+  .sidebar__foot {
+    display: none;
+  }
+
+  .sidebar__nav {
+    flex: 1;
+    flex-direction: row;
+    padding: 0;
+  }
+
+  .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    height: 56px;
+    padding: 0 2px;
+    border-left: 0;
+    /* the active marker moves from the leading edge to the top edge */
+    border-top: 2px solid transparent;
+  }
+
+  .nav-item--active {
+    border-top-color: var(--color-accent);
+  }
+
+  .nav-item__label {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 14px 10px;
+  }
+
+  .topbar__id {
+    /* leave room for the locale button, which sits on the same line */
+    flex: 1 1 auto;
+  }
+
+  .topbar__shop {
+    display: block;
+    font: 400 9.5px/1 var(--font-body);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-neutral-600);
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar__title {
+    font-size: 19px;
+  }
+
+  .topbar__actions {
+    /* the page's own actions drop to their own line rather than squeezing */
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .topbar__locale {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--color-divider);
+    border-radius: 0;
+    font: 600 11px/1 var(--font-heading);
+    letter-spacing: 0.1em;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .main__body {
+    /* the sections lay out as one column and scroll as a page */
+    flex-direction: column;
+    overflow-y: auto;
+  }
 }
 </style>

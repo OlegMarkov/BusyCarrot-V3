@@ -90,6 +90,8 @@ export function useDayColumns(days, selectedId) {
           gaps.push({
             key: `${key}-gap-${from}`,
             start: from,
+            end: to,
+            duration: to - from,
             top: `${(from - GRID_START) * PX_PER_MINUTE}px`,
             height: `${(to - from) * PX_PER_MINUTE - 2}px`,
             // Only label the duration when there is room to read it.
@@ -111,6 +113,9 @@ export function useDayColumns(days, selectedId) {
           blocks.push({
             key: reservation.id,
             id: reservation.id,
+            start: startM,
+            end: endM,
+            duration: endM - startM,
             top: `${(startM - GRID_START) * PX_PER_MINUTE}px`,
             height: `${heightPx}px`,
             showTime: heightPx >= 46,
@@ -130,6 +135,17 @@ export function useDayColumns(days, selectedId) {
 
       const total = list.reduce((sum, r) => sum + (r.cost ?? 0), 0)
 
+      /**
+       * The same day read as a flow rather than a positioned grid: bookings and
+       * bookable gaps interleaved in clock order. This is what the mobile
+       * layout draws, where there is no room for seven absolute columns — and
+       * the gaps stay first-class, because they are the booking affordance.
+       */
+      const timeline = [
+        ...blocks.map((block) => ({ ...block, type: 'booking' })),
+        ...gaps.map((gap) => ({ ...gap, type: 'gap' }))
+      ].sort((a, b) => a.start - b.start)
+
       return {
         key,
         dow: day.format('dd'),
@@ -142,6 +158,7 @@ export function useDayColumns(days, selectedId) {
         reservations: list,
         blocks,
         gaps,
+        timeline,
         selectedId: unref(selectedId)
       }
     })

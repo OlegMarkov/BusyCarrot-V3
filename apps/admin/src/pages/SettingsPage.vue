@@ -204,4 +204,21 @@ const subscriptionNote = computed(() => {
   text-transform: uppercase;
   font-size: 12px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px — the design's single breakpoint.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .page {
+    flex-direction: column;
+    gap: 22px;
+    padding: 14px 14px 26px;
+  }
+
+  .page__main,
+  .sub {
+    width: 100%;
+    max-width: none;
+  }
+}
 </style>

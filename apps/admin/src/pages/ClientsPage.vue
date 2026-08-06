@@ -14,16 +14,21 @@
           <tr>
             <th class="col-initials" />
             <th>{{ t('clients.client') }}</th>
-            <th>{{ t('clients.phone') }}</th>
+            <th class="col-phone">{{ t('clients.phone') }}</th>
             <th class="num">{{ t('clients.visits') }}</th>
-            <th class="num">{{ t('clients.lastVisit') }}</th>
-            <th class="num">{{ t('clients.nextVisit') }}</th>
+            <th class="num col-last">{{ t('clients.lastVisit') }}</th>
+            <th class="num col-next">{{ t('clients.nextVisit') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in rows" :key="row.id">
             <td><div class="initials">{{ row.initials }}</div></td>
-            <td class="cell-name">{{ row.name }}</td>
+            <td class="cell-name">
+              {{ row.name }}
+              <!-- The phone has its own column on desktop; under the breakpoint
+                   that column is dropped and it reads as a second line here. -->
+              <span class="cell-name__phone">{{ row.phone }}</span>
+            </td>
             <td class="cell-phone">{{ row.phone }}</td>
             <td class="num cell-visits">{{ row.visits }}</td>
             <td class="num cell-last">{{ row.last }}</td>
@@ -173,6 +178,14 @@ const rows = computed(() => {
   color: var(--color-accent-700);
 }
 
+/* Hidden until the phone column is dropped at the breakpoint. */
+.cell-name__phone {
+  display: none;
+  font: 400 12px/1.35 var(--font-body);
+  color: var(--color-neutral-700);
+  margin-top: 2px;
+}
+
 .cell-name {
   font: 600 15px var(--font-heading);
 }
@@ -205,5 +218,47 @@ const rows = computed(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-neutral-600);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Below 1024px — the design's single breakpoint.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023.98px) {
+  .page {
+    padding: 14px 14px 26px;
+  }
+
+  .page__tools {
+    max-width: none;
+  }
+
+  .page__add {
+    /* the design's 36px square add button, label dropped */
+    flex: none;
+    padding: 0 14px;
+  }
+
+  th.col-last,
+  th.col-next,
+  .cell-last,
+  .cell-next,
+  .cell-phone,
+  th.col-phone {
+    display: none;
+  }
+
+  .cell-name__phone {
+    display: block;
+  }
+
+  .initials {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+
+  .cell-name {
+    font-size: 14px;
+  }
 }
 </style>
