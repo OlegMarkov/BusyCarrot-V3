@@ -212,7 +212,11 @@
     "personal-site-not-available": "Персональный сайт доступен только для активной подписки",
     "legalInformationTitle": "Правовая информация",
     "legalInformationNote": "Раздел с информацией о порядке оказания услуг, информации о возврате, пользовательское соглашение, реквизиты...",
-    "subscription-default": "Базовая"
+    "subscription-default": "Базовая",
+    "week-pattern": "Расписание недели",
+    "open-days": "{0} рабочих дней в неделю",
+    "custom-overrides": "Особые дни",
+    "subscription-until": "До {0}"
   },
   "validation": {
     "required": "Обязательное поле",

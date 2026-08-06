@@ -212,7 +212,11 @@
     "personal-site-not-available": "Personal site is available only for active subscription",
     "legalInformationTitle": "Legal information",
     "legalInformationNote": "Section with information on the procedure for the provision of services, information on returns, user agreement, etc...",
-    "subscription-default": "Default"
+    "subscription-default": "Default",
+    "week-pattern": "Weekly pattern",
+    "open-days": "{0} open days a week",
+    "custom-overrides": "Custom overrides",
+    "subscription-until": "Until {0}"
   },
   "validation": {
     "required": "Required",

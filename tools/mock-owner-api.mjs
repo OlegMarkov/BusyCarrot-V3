@@ -79,12 +79,24 @@ const RESERVATIONS = [
 ]
 
 // dayNumber is Monday-indexed, matching Vegetable.API's scheduleOnDays.
+// The hours vary by day so the week reads as a shape rather than a block:
+// Mon–Thu 09:00–18:00, Fri to 19:00, Sat 10:00–16:00, Sun closed.
+const DAY_HOURS = [
+  ['09:00:00', '18:00:00'],
+  ['09:00:00', '18:00:00'],
+  ['09:00:00', '18:00:00'],
+  ['09:00:00', '18:00:00'],
+  ['09:00:00', '19:00:00'],
+  ['10:00:00', '16:00:00'],
+  null
+]
+
 const scheduleOnDay = (i) => ({
   id: `sod${i}`,
   dayNumber: i,
-  isEnabled: i < 5,
-  workStartTime: '09:00:00',
-  workEndTime: '18:00:00',
+  isEnabled: DAY_HOURS[i] !== null,
+  workStartTime: (DAY_HOURS[i] || DAY_HOURS[0])[0],
+  workEndTime: (DAY_HOURS[i] || DAY_HOURS[0])[1],
   breakStartTime: '13:00:00',
   breakEndTime: '14:00:00',
   enableBreakTime: true
@@ -94,7 +106,8 @@ const SCHEDULES = EMPLOYEES.map((e, idx) => ({
   id: `sch${idx + 1}`,
   ownerId: OWNER_ID,
   employeeId: e.id,
-  scheduleType: 1,
+  // 0 = weekly, the shape the Hours screen draws as a bar per weekday.
+  scheduleType: 0,
   scheduleStartDate: day(-30),
   scheduleEndDate: day(365),
   onDays: 5,
@@ -114,6 +127,11 @@ const OWNER = {
   currencyCode: 'RUB',
   language: 'ru',
   disableReservationAtSameDay: false,
+  // A subscribed owner, so the Settings panel exercises its figure and its
+  // "personal site" row rather than only the never-subscribed default.
+  subscription: { id: 'st1', title: 'Premium', cost: 500, currencyCode: 'RUB' },
+  hasActiveSubscription: true,
+  subscriptionEndDate: day(180),
   phoneNumbers: [{ id: 'p1', number: '+7 999 123-45-67', type: 1 }],
   addresses: [{ id: 'ad1', description: 'Главный салон', state: 'Москва', city: 'Москва', street: 'Тверская', unit: '12', points: '37.6156 55.7522' }],
   socialNetworks: [{ id: 's1', type: 11, url: 'instagram.com/busycarrot' }],

@@ -1,12 +1,17 @@
 <template>
   <view class="nv flex flex-column overflow-hidden">
-    <uni-nav-bar
-      :fixed="true"
-      status-bar="true"
-      right-icon="personadd"
-      @clickRight="openAddCustomerOptionsPopup"
-    >
-      <search-input @input="onSearchInput" />
+    <!--
+      The design pairs the search field with a square primary add button on the
+      same row, rather than hiding "add" behind an icon in the nav bar's right
+      slot. Same action, same popup — it is just visible now.
+    -->
+    <uni-nav-bar :fixed="true" status-bar="true">
+      <view class="tools">
+        <search-input class="tools__search" @input="onSearchInput" />
+        <view class="tools__add" @click="openAddCustomerOptionsPopup">
+          <uni-icons type="plus" :size="17" color="#f2f2f3" />
+        </view>
+      </view>
     </uni-nav-bar>
 
     <uni-popup-options
@@ -54,6 +59,7 @@
 <script>
 import { mapState } from 'pinia'
 import uniNavBar from '@/components/ui/uni-nav-bar/uni-nav-bar.vue'
+import uniIcons from '@/components/ui/uni-icons/uni-icons.vue'
 import searchInput from '@/components/app/search-input.vue'
 import customerListItem from '@/components/app/customer-list-item.vue'
 import uniPopupOptions from '@/components/app/popup-options/uni-popup-options.vue'
@@ -87,6 +93,7 @@ export default {
   name: 'CustomersList',
   components: {
     uniNavBar,
+    uniIcons,
     searchInput,
     customerListItem,
     uniPopupOptions,
@@ -175,3 +182,28 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+/* The search field and the add button share one row; the button is the
+   system's one solid object, 36px square to match the field's height. */
+.tools {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+}
+
+.tools__search {
+  flex: 1;
+}
+
+.tools__add {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+</style>

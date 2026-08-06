@@ -21,6 +21,19 @@
           </view>
 
           <text class="sub-plate__note">{{ $t('general-settings.subscriptionNote') }}</text>
+
+          <!--
+            The design gives the panel a figure and its own call to action. The
+            figure is whichever the owner record actually carries — the plan's
+            price for a subscriber, the date it runs to otherwise — rather than
+            a number fetched only to be displayed here.
+          -->
+          <view class="sub-plate__foot">
+            <text v-if="subscriptionFigure" class="sub-plate__figure">{{ subscriptionFigure }}</text>
+            <view class="btn btn-primary sub-plate__cta" @click.stop="navigateTo('/pages/settings/subscriptions')">
+              <text class="sub-plate__cta-text">{{ $t('subscription.renew') }}</text>
+            </view>
+          </view>
         </view>
 
         <text class="settings-label">{{ $t('general-settings.language') }}</text>
@@ -71,6 +84,7 @@
 </template>
 
 <script>
+import moment from 'moment'
 import { mapState } from 'pinia'
 import uniNavBar from '@/components/ui/uni-nav-bar/uni-nav-bar.vue'
 import uniList from '@/components/ui/uni-list/uni-list.vue'
@@ -124,6 +138,24 @@ export default {
 
     ownerHasActiveSubscription() {
       return Boolean(this.owner?.hasActiveSubscription && this.owner?.subscriptionEndDate != null)
+    },
+
+    /**
+     * The panel's figure: the plan's price when the owner record carries one,
+     * otherwise the date the subscription runs to. Empty when it has neither,
+     * which is the default (never-subscribed) state.
+     */
+    subscriptionFigure() {
+      const cost = this.owner?.subscription?.cost
+      if (cost != null) {
+        return this.$t('common.price-format', [this.owner?.currency?.symbol ?? '', cost])
+      }
+      if (this.owner?.subscriptionEndDate) {
+        return this.$t('general-settings.subscription-until', [
+          moment(this.owner.subscriptionEndDate).format('DD.MM.YYYY')
+        ])
+      }
+      return ''
     },
 
     subscriptionBadgeText() {
@@ -221,6 +253,37 @@ export default {
   line-height: 1.5;
   color: var(--color-neutral-700);
   margin-top: 8px;
+}
+
+.sub-plate__foot {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 13px;
+}
+
+.sub-plate__figure {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 19px;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.sub-plate__cta {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 18px;
+}
+
+.sub-plate__cta-text {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-bg);
 }
 
 .settings-label {

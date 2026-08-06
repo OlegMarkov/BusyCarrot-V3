@@ -1,6 +1,8 @@
 <template>
   <view class="nv flex flex-column overflow-hidden">
-    <uni-nav-bar :fixed="true" status-bar="true" right-icon="plus" @clickRight="navigate()">
+    <!-- The design gives this screen one add control, the full-width button at
+         the end of the list, so the nav bar carries only the search. -->
+    <uni-nav-bar :fixed="true" status-bar="true">
       <search-input @input="onSearchInput" />
     </uni-nav-bar>
 
@@ -19,18 +21,10 @@
           <text class="price-list__count">{{ filteredServices.length }}</text>
         </view>
 
-        <view class="price-list__columns">
-          <text class="price-list__col price-list__col--n">#</text>
-          <text class="price-list__col price-list__col--name">{{ $t('service.service') }}</text>
-          <text class="price-list__col price-list__col--min">{{ $t('service.min') }}</text>
-          <text class="price-list__col price-list__col--price">{{ $t('service.price') }}</text>
-        </view>
-
         <service-list-item
-          v-for="(service, i) in filteredServices"
+          v-for="service in filteredServices"
           :key="service.id"
           :service="service"
-          :index="i + 1"
           @click="navigate(service)"
         />
 
@@ -155,37 +149,6 @@ export default {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-neutral-600);
-}
-
-/* The column heads of the spec sheet. */
-.price-list__columns {
-  flex-direction: row;
-  align-items: center;
-  padding: 0 2px 6px;
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.price-list__col {
-  font-family: var(--font-body);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.price-list__col--n {
-  width: 26px;
-}
-.price-list__col--name {
-  flex: 1;
-}
-.price-list__col--min {
-  width: 52px;
-  text-align: right;
-}
-.price-list__col--price {
-  width: 54px;
-  text-align: right;
 }
 
 .price-list__add {

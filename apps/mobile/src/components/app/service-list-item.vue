@@ -1,12 +1,13 @@
 <template>
   <!--
-    A price-list line. The design draws services as a spec-sheet table — an
-    index number, the service over its description, then minutes and price
+    A price-list line: the service over its description, then minutes and price
     reading down the right edge in condensed figures.
+
+    No ordinal here — the numbered column belongs to the desktop table, which is
+    wide enough for it; the mobile screen is the title, the duration and the
+    price.
   -->
   <view class="svc-row" @longpress="longpress" @click="$emit('click')">
-    <text class="svc-row__n">{{ indexText }}</text>
-
     <view class="svc-row__main">
       <text class="svc-row__title">{{ title }}</text>
       <text v-if="description" class="svc-row__desc">{{ description }}</text>
@@ -60,11 +61,6 @@ export default {
     service: {
       type: Object,
       required: true
-    },
-    /** 1-based position in the price list; rendered as the table's # column. */
-    index: {
-      type: Number,
-      default: 0
     }
   },
   computed: {
@@ -81,9 +77,6 @@ export default {
     },
 
     /* — the price-list columns — */
-    indexText() {
-      return this.index ? String(this.index).padStart(2, '0') : ''
-    },
     description() {
       return this.service.description || ''
     },
@@ -138,15 +131,6 @@ export default {
   align-items: center;
   padding: 11px 2px;
   border-bottom: 1px solid var(--color-rule);
-}
-
-/* The index sits in monospace — it is a reference, not prose. */
-.svc-row__n {
-  width: 26px;
-  flex-shrink: 0;
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 11px;
-  color: var(--color-neutral-600);
 }
 
 .svc-row__main {

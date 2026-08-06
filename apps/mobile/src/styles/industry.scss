@@ -364,15 +364,16 @@
 
 /* The initials box on a client row: a framed square, not an avatar circle. */
 .ind-initials {
-	width: 38px;
-	height: 38px;
+	/* 34px square at 12px, matching the design's client rows on both form factors. */
+	width: 34px;
+	height: 34px;
 	flex-shrink: 0;
 	border: 1px solid var(--color-divider);
 	align-items: center;
 	justify-content: center;
 	font-family: var(--font-heading);
 	font-weight: 600;
-	font-size: 13px;
+	font-size: 12px;
 	letter-spacing: 0.04em;
 	color: var(--color-accent-700);
 }

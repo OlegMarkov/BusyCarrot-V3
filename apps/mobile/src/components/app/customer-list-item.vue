@@ -190,9 +190,9 @@ export default {
 
 .client-row__phone {
   font-family: var(--font-body);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.4;
-  color: var(--color-neutral-600);
+  color: var(--color-neutral-700);
 }
 
 .client-row__meta {

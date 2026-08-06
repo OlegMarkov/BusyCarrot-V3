@@ -17,6 +17,18 @@
       @refresherrefresh="refresh"
       @scroll="onScroll"
     >
+      <!--
+        The design opens this screen with the week read as a bar chart rather
+        than as a list row. It only draws for a weekly schedule — a rotating one
+        indexes its days by cycle position, not by weekday — so the general
+        group below still renders whatever the pattern cannot show.
+      -->
+      <week-pattern
+        v-if="weeklySchedule"
+        :schedule="weeklySchedule"
+        @click="navigate(weeklySchedule)"
+      />
+
       <uni-list>
         <template v-for="group in groups" :key="group.key">
           <template v-if="group.schedules.length > 0">
@@ -41,6 +53,7 @@ import uniNavBar from '@/components/ui/uni-nav-bar/uni-nav-bar.vue'
 import uniList from '@/components/ui/uni-list/uni-list.vue'
 import uniSection from '@/components/ui/uni-section/uni-section.vue'
 import scheduleListItem from '@/components/app/schedule-list-item.vue'
+import weekPattern from '@/components/app/week-pattern.vue'
 import { useScheduleStore } from '@/stores/schedule'
 import { useEmployeeStore } from '@/stores/employee'
 import { useAppStore } from '@/stores/app'
@@ -63,7 +76,7 @@ import { SCHEDULE_TYPES } from '@/constants/schedule-types'
  *  - `getSwipeActions` and the `searchInput` import were never used; dropped
  */
 export default {
-  components: { uniNavBar, uniList, uniSection, scheduleListItem },
+  components: { uniNavBar, uniList, uniSection, scheduleListItem, weekPattern },
   data() {
     return {
       refreshing: false,
@@ -75,6 +88,13 @@ export default {
     ...mapState(useScheduleStore, ['schedules']),
     ...mapState(useEmployeeStore, ['employees']),
     ...mapState(useAppStore, ['tabIndex']),
+
+    /** The weekly schedule, if the general one is of that kind. */
+    weeklySchedule() {
+      return this.generalSchedules.find(
+        (schedule) => schedule.scheduleType === SCHEDULE_TYPES.Week
+      )
+    },
 
     generalSchedules() {
       return this.schedules.filter(
@@ -101,11 +121,15 @@ export default {
         {
           key: 'general',
           title: 'general-settings.general-schedule',
-          schedules: this.generalSchedules
+          // The weekly one is drawn as the pattern above; only a rotating
+          // schedule still needs its summary row here.
+          schedules: this.generalSchedules.filter(
+            (schedule) => schedule.scheduleType !== SCHEDULE_TYPES.Week
+          )
         },
         {
           key: 'upcoming',
-          title: 'general-settings.upcoming-schedules',
+          title: 'general-settings.custom-overrides',
           schedules: this.upcomingCustomSchedules
         },
         {
