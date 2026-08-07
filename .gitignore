@@ -14,3 +14,7 @@ dist/
 
 # uni-app build output
 unpackage/
+
+# Copied out of node_modules by tools/vendor-uikit.mjs on predev/prebuild.
+# npm owns the version; these are build output.
+apps/obs/public/vendor/

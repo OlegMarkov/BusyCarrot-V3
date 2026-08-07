@@ -833,6 +833,26 @@ is in **Allowed Web Origins**, **Allowed Callback URLs** and **Allowed Logout
 URLs** for client `KpF5kduqFqXVHykbcCDDMYhUI0VPboP3`. The symptom is an
 origin error in the console followed by the SSO warning Lock always prints.
 
+## Obs serves UIkit itself
+
+`index.html` used to pull UIkit's stylesheet and both scripts from jsdelivr.
+UIkit drives the booking wizard's tab/switcher, the modals, the offcanvas and
+every icon, so that put the public site's core interaction behind a third party
+being reachable: lose the CDN and the page loads but cannot take a booking.
+
+The files now come from `/vendor/uikit/`, copied out of `node_modules` by
+`tools/vendor-uikit.mjs` on `predev` and `prebuild`. npm owns the version —
+`uikit` is a dependency of `apps/obs` — and the copies are gitignored because
+they are build output.
+
+They are loaded as **classic script tags, not an ES import**, and that is not
+laziness. `import UIkit from 'uikit'` does yield a working object: `UIkit.tab(el)`
+and `UIkit.icon(el)` both behave when called explicitly. What does not survive
+Vite's interop is UIkit's automatic boot, the pass that scans the document for
+`uk-*` attributes — so with the import, all six `uk-icon` elements rendered
+empty and the declarative switcher never activated. Measured before and after:
+0/6 icons with the import, 6/6 with the script tags.
+
 ## Obs cannot take a booking without a reCAPTCHA key
 
 `VITE_RECAPTCHA_SITE_KEY` is not optional for the public site.

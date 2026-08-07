@@ -4,21 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="online booking site" />
+    <meta name="theme-color" content="#f2f2f3" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
       UIkit drives the wizard (uk-tab / uk-switcher), the offcanvas, the modals
       and the icons, and the components call the `UIkit` global imperatively —
       see src/composables/wizard.js.
 
-      Vegetable.Obs pinned 3.0.0-beta.42 in nuxt.config.js; this is the current
-      3.x line, whose tab/switcher/offcanvas/modal APIs are unchanged from that
-      beta. vegetable.web loaded no UIkit at all — its Razor layout
-      (Views/Shared/_PersonalPage.cshtml) included only Bootstrap — so every
-      `UIkit.*` call in that app threw.
+      These are served from this site, not from a CDN. jsdelivr used to host
+      them, which put the booking flow behind a third party being reachable.
+      The files are copied out of node_modules by tools/vendor-uikit.mjs on
+      predev/prebuild, so npm still owns the version.
+
+      Classic script tags rather than an ES import on purpose: imported through
+      Vite, UIkit's automatic boot does not run, so `uk-icon` renders nothing
+      and the switcher never activates. The UMD is what this markup expects.
     -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/css/uikit.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/js/uikit.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/uikit@3.21.16/dist/js/uikit-icons.min.js"></script>
+    <link rel="stylesheet" href="/vendor/uikit/uikit.min.css" />
+    <script src="/vendor/uikit/uikit.min.js"></script>
+    <script src="/vendor/uikit/uikit-icons.min.js"></script>
     <title>Vegetable - online booking</title>
   </head>
   <body>
