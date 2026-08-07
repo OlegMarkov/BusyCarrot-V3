@@ -775,6 +775,90 @@ Two bugs found while verifying it against the real API:
   had been rendering "undefined ₽". The stub had invented `code`, so this only
   appeared against a real API. Both are now aligned.
 
+### A bootstrap bug this surfaced
+
+The shell guarded its data load on `owner.owner?.id`. The owner store is
+persisted; the employee and service stores are not, and they are populated *as a
+side effect of that same call*. So on any reload with a persisted owner the
+services and employees stores stayed empty for good — the Services page showed
+"0 services" against a populated API. The guard now covers everything the call
+fills.
+
+# Deploying the two web apps
+
+Both are static sites. `npm run build:admin` and `npm run build:obs` each
+produce a `dist/` folder that is the whole deployable: hashed assets, an
+`index.html`, a favicon and a `web.config`. Copy the folder to an IIS site
+root; there is nothing to install and no process to run.
+
+## The build belongs to one environment
+
+Vite inlines every `VITE_*` value into the JavaScript at build time. The API
+URL, the Auth0 client id and the reCAPTCHA site key are compiled in, so **an
+artifact cannot be promoted from staging to production** — build once per
+target with that target's `.env.production`.
+
+`.env.production.example` in each app is the template and is tracked;
+`.env.production` itself is not, so a stray commit cannot repoint an
+environment. None of the values are secrets: they all ship in the bundle by
+design, and the Auth0 client *secret* appears nowhere in this repo.
+
+## What the web.config does
+
+It lives in `public/`, so Vite copies it into `dist/` on every build and the
+folder stays self-contained. Three things:
+
+**The SPA fallback.** Both apps use vue-router in history mode, so `/clients`
+and `/{alias}` are routes the client resolves, not folders on disk. Anything
+that is not a real file or directory is rewritten to `/index.html`. Obs needs
+this more than admin does: every owner's page is a path, so without the rule
+every booking link anyone has shared returns 404.
+
+This needs the **IIS URL Rewrite module**, which is not installed by default.
+Missing, IIS answers 500.19 on the config file rather than ignoring the rule —
+it fails loudly, which is the good failure.
+
+**MIME types.** IIS has no mapping for `.json`, `.woff2` or `.webmanifest` and
+answers 404 for them out of the box.
+
+**Caching.** Everything under `/assets` is fingerprinted by Vite and is served
+`immutable` for a year. `index.html` is served no-cache: it is the file that
+names the current hashed bundles, so caching it makes a deploy invisible until
+the browser gives up on its copy.
+
+## Auth0 has to be told the origin
+
+Admin's login fails at the tenant, not in the app, unless the deployed origin
+is in **Allowed Web Origins**, **Allowed Callback URLs** and **Allowed Logout
+URLs** for client `KpF5kduqFqXVHykbcCDDMYhUI0VPboP3`. The symptom is an
+origin error in the console followed by the SSO warning Lock always prints.
+
+## Obs cannot take a booking without a reCAPTCHA key
+
+`VITE_RECAPTCHA_SITE_KEY` is not optional for the public site.
+Vegetable.API guards `PUT publicowner/reservation/{alias}` and
+`GET publicowner/verifycode/{phone}` with `QueryTokenFilter`, which verifies a
+reCAPTCHA token and returns 401 without one. Unset, the wizard runs to the last
+step and then says captcha is not configured — an honest failure, but still a
+booking site that cannot take a booking.
+
+## What was removed
+
+`apps/admin` carried a `Dockerfile`, two compose files and a `.dockerignore`
+from VS Code's "Add Docker Files" command. None of it worked for this app: the
+Dockerfile ran `npm start`, which is not a script here, and served port 3000
+for what is a folder of static files; `compose.debug.yaml` ran
+`node --inspect index.js`, which does not exist; and the build context was
+`apps/admin` alone, which cannot resolve the `@vegetable/api-client` workspace
+dependency. Deleted rather than repaired — the target is IIS.
+
+# Running the real Vegetable.API locally
+
+Everything in this document was verified against `tools/mock-owner-api.mjs`
+until this point. The stub answers the shapes the client asks for; it validates
+nothing, and it agreed with mistakes the real API does not. They are described
+at the end.
+
 ## What it needs
 
 - **.NET 6 SDK.** `Vegetable.API` targets `net6.0`.

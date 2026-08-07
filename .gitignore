@@ -4,6 +4,12 @@ dist/
 # Covers .env.local, .env.development.local, .env.production.local — the
 # per-developer overrides. .env.example stays tracked as the template.
 .env*.local
+
+# The real per-environment build config. `.env.production.example` is tracked
+# as the template; the file that decides which host an artifact points at is
+# not, so staging and production cannot be swapped by a stray commit.
+.env.production
+.env.staging
 *.log
 
 # uni-app build output
