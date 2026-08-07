@@ -127,7 +127,8 @@ const OWNER = {
   email: 'owner@example.com',
   country: 'RU',
   timeZone: 'Europe/Moscow',
-  currency: { code: 'RUB', symbol: '₽' },
+  // The real API returns { id, currencyCode, name, symbol } — not .
+  currency: { id: 1, currencyCode: 'RUB', name: 'Russian ruble', symbol: '₽' },
   currencyCode: 'RUB',
   language: 'ru',
   disableReservationAtSameDay: false,
@@ -320,7 +321,9 @@ const GETS = [
   [/^owner\/notification\/reminder/, () => ({ id: 'rem1', remindInMin: 120, isEnabled: true })],
   [/^owner\/notification/, () => NOTIFICATIONS],
   [/^owner\/user/, () => ({ id: 'u1', ownerId: OWNER_ID, phoneNumber: '79990000001', language: 'ru', onboardingCompleted: true, userDatas: [] })],
-  [/^settings\/currency$/, () => [{ code: 'RUB', symbol: '₽', title: 'Рубль' }, { code: 'USD', symbol: '$', title: 'Dollar' }]],
+  // { id, currencyCode, name, symbol } — the shape Vegetable.API returns. The
+  // earlier `code`/`title` guess is what let admin ship a "undefined ₽" row.
+  [/^settings\/currency$/, () => [{ id: 1, currencyCode: 'RUB', name: 'Russian ruble', symbol: '₽' }, { id: 2, currencyCode: 'USD', name: 'US dollar', symbol: '$' }]],
   [/^settings\/hints$/, () => [{ id: 'h1', key: 'dashboard', text: 'Проведите влево для следующего дня' }]],
   [/^settings\/applicationsettings$/, () => ({ minVersion: '1.0.0', currentVersion: '1.0.0' })],
   [/^settings\/subscriptiontypes$/, () => SUBSCRIPTION_TYPES],

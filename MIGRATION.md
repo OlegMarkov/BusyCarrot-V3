@@ -739,36 +739,41 @@ system rather than a transcription of it. All three are the design system's own
 EmployeesList/InList, ServicesList/InList and UserProfile were all superseded by
 the five sections and these dialogs.
 
-### One capability dropped
+### The two capabilities that were dropped, and are back
 
-`elements/AvatarEditor.vue` is gone and **employee avatars can no longer be
-set**. The cropper it wrapped (`vue-advanced-cropper`) was not Vuetify, but its
-entire surrounding UI was, and the design uses framed initials everywhere it
-shows a person — the clients table, the employee rows, the booking blocks — so
-there is nowhere for a photograph to appear. The existing `avatar` field is left
-untouched on save, so stored images are not destroyed. `vue-advanced-cropper` is
-out of `package.json`; re-adding it and rebuilding the cropper's chrome is the
-route back.
+Both were listed here as dropped by the redesign. Both have been restored.
 
-`GeneralSettings` also went without replacement: the owner's company details
-(name, alias, addresses, phone numbers, social links) are readable on the
-Settings page but not yet editable.
+**Employee avatars.** `elements/AvatarPicker.vue` picks a file, draws it into a
+square canvas, and lets it be dragged and zoomed before reading it back as a
+data URL — the same thing `Employee.Avatar` already stored, and the same thing
+the old editor wrote. It does not bring `vue-advanced-cropper` back: one field
+in one dialog did not justify the dependency, and the crop is about eighty
+lines of canvas.
 
-### A bootstrap bug this surfaced
+The output is JPEG at 0.85 rather than PNG. This string rides in the employee
+record on every fetch, and a photograph as PNG is several times the size — the
+test crop came to 4 KB.
 
-The shell guarded its data load on `owner.owner?.id`. The owner store is
-persisted; the employee and service stores are not, and they are populated *as a
-side effect of that same call*. So on any reload with a persisted owner the
-services and employees stores stayed empty for good — the Services page showed
-"0 services" against a populated API. The guard now covers everything the call
-fills.
+Where a photograph exists it fills the framed square the design gives a person,
+in the editor and in the employees list, so the system's square is kept and only
+its contents change.
 
-# Running the real Vegetable.API locally
+**Owner company details.** `editors/OwnerEditDialog.vue`, reached from a new
+Company row on the Settings page. Same field set as the Vuetify
+`general-settings.vue` it replaces: name, description, alias, currency, the
+publish switch and the address list. That component never edited phone numbers
+or social links, and neither does this — an earlier note here claimed otherwise
+and was wrong.
 
-Everything in this document was verified against `tools/mock-owner-api.mjs`
-until this point. The stub answers the shapes the client asks for; it validates
-nothing, and it agreed with two mistakes the real API does not. Both are
-described at the end.
+Two bugs found while verifying it against the real API:
+
+- `owner/information` answers **200 with an empty body**. The first version read
+  `response.data ?? draft`, and an empty string is not nullish, so it stored
+  `''` as the owner — which persists, so the next load had no owner at all and
+  the dialog opened blank. It now checks for a non-empty body.
+- The Settings page read `currency.code`; the API sends `currencyCode`. The row
+  had been rendering "undefined ₽". The stub had invented `code`, so this only
+  appeared against a real API. Both are now aligned.
 
 ## What it needs
 

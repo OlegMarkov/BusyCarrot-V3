@@ -6,7 +6,11 @@
   >
     <div class="list">
       <div v-for="employee in list" :key="employee.id" class="row" @click="edit(employee.id)">
-        <div class="row__initials">{{ initialsOf(employee) }}</div>
+        <!-- The photograph fills the same square the initials occupy. -->
+        <div class="row__initials">
+          <img v-if="employee.avatar" :src="employee.avatar" class="row__avatar" alt="" />
+          <template v-else>{{ initialsOf(employee) }}</template>
+        </div>
         <div class="row__main">
           <div class="row__name">{{ nameOf(employee) }}</div>
           <div class="row__note">{{ employee.phone || employee.email || '—' }}</div>
@@ -113,6 +117,14 @@ function close() {
   justify-content: center;
   font: 600 12px var(--font-heading);
   color: var(--color-accent-700);
+  overflow: hidden;
+}
+
+.row__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .row__main {

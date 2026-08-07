@@ -10,7 +10,11 @@
 
     <div v-else class="form">
       <div class="form__identity">
-        <div class="initials">{{ initials || '—' }}</div>
+        <!--
+          The design shows a person as framed initials. A photograph goes in the
+          same frame rather than beside it, so the square stays the square.
+        -->
+        <avatar-picker v-model="employee.avatar" :initials="initials" />
         <div class="form__names">
           <div class="field">
             <label>{{ t('employee.firstName') }}</label>
@@ -85,6 +89,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppDialog from '@/components/ui/AppDialog.vue'
 import ColorSelector from '@/components/elements/ColorSelector.vue'
+import AvatarPicker from '@/components/elements/AvatarPicker.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import { apiClient } from '@/plugins/api'
 import { useEmployeeStore } from '@/stores/employee'
@@ -97,10 +102,12 @@ import { useServiceStore } from '@/stores/service'
  * what Vegetable.API expects.
  *
  * Dropped with Vuetify: the fourteen per-field skeleton loaders (one plain
- * "loading" line now), and the avatar cropper. The cropper itself is
- * `vue-advanced-cropper`, not Vuetify, but its whole surrounding UI was — see
- * the note in MIGRATION.md; the initials square stands in for now and the
- * existing avatar is left untouched on save.
+ * "loading" line now).
+ *
+ * The avatar came back as elements/AvatarPicker.vue, which crops on a canvas
+ * rather than through `vue-advanced-cropper` — one field in one dialog did not
+ * justify taking the dependency back. It writes the same thing the old editor
+ * did: a data URL in `employee.avatar`.
  */
 const EMPTY_GUID = '00000000-0000-0000-0000-000000000000'
 

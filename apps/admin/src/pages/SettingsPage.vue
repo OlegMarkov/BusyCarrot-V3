@@ -26,6 +26,7 @@
       </div>
 
       <employees-dialog v-model="employeesOpen" />
+      <owner-edit-dialog v-model="companyOpen" />
 
       <div class="blueprint sub">
         <i class="corner tl" /><i class="corner tr" /><i class="corner bl" /><i class="corner br" />
@@ -50,6 +51,7 @@ import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/AppShell.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import EmployeesDialog from '@/components/editors/EmployeesDialog.vue'
+import OwnerEditDialog from '@/components/editors/OwnerEditDialog.vue'
 import { useOwnerStore } from '@/stores/owner'
 import { useEmployeeStore } from '@/stores/employee'
 import { logout } from '@/plugins/auth'
@@ -71,8 +73,18 @@ function signOut() {
 
 const ownerName = computed(() => owner.owner?.title ?? '')
 const employeesOpen = ref(false)
+const companyOpen = ref(false)
 
 const rows = computed(() => [
+  {
+    key: 'company',
+    title: t('settings.company'),
+    note: t('settings.companyNote'),
+    value: owner.owner?.title ?? '',
+    go: () => {
+      companyOpen.value = true
+    }
+  },
   {
     key: 'account',
     title: t('settings.account'),
@@ -84,7 +96,9 @@ const rows = computed(() => [
     title: t('settings.currency'),
     note: t('settings.currencyNote'),
     value: owner.owner?.currency
-      ? `${owner.owner.currency.code} ${owner.owner.currency.symbol}`
+      // `currencyCode`, not `code` — the stub used the latter and this read
+      // "undefined ₽" against a real API.
+      ? `${owner.owner.currency.currencyCode} ${owner.owner.currency.symbol}`
       : ''
   },
   {

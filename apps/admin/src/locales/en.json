@@ -195,6 +195,27 @@
     "free": "Free",
     "freeNote": "The free plan — upgrade for online booking and notifications",
     "renews": "Renews",
-    "renew": "Renew"
+    "renew": "Renew",
+    "company": "Company",
+    "companyNote": "Name, alias and addresses",
+    "title": "Business name",
+    "description": "Description",
+    "alias": "Public address",
+    "aliasNote": "busycarrot.com/…",
+    "allowSite": "Publish the booking site",
+    "addresses": "Addresses",
+    "addAddress": "Add address",
+    "addrDescription": "Label",
+    "addrState": "Region",
+    "addrCity": "City",
+    "addrPostal": "Postcode",
+    "addrStreet": "Street",
+    "addrUnit": "Unit",
+    "noAddresses": "No addresses yet",
+    "avatar": "Photo",
+    "avatarNote": "Square, used in place of the initials",
+    "removePhoto": "Remove photo",
+    "choosePhoto": "Choose photo",
+    "zoom": "Zoom"
   }
 }
