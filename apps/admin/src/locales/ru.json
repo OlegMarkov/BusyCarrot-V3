@@ -145,7 +145,10 @@
     "services": "Услуги",
     "hours": "Часы",
     "settings": "Настройки",
-    "language": "Язык"
+    "language": "Язык",
+    "account": "Аккаунт",
+    "sign-out": "Выйти",
+    "sign-out-confirm": "Выйти из BusyCarrot?"
   },
   "clients": {
     "search": "Поиск клиентов",

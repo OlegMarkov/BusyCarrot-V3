@@ -149,7 +149,10 @@
     "services": "Services",
     "hours": "Hours",
     "settings": "Settings",
-    "language": "Language"
+    "language": "Language",
+    "account": "Account",
+    "sign-out": "Sign out",
+    "sign-out-confirm": "Sign out of BusyCarrot?"
   },
   "clients": {
     "search": "Search clients",

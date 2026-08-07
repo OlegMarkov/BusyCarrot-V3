@@ -34,6 +34,24 @@
           </label>
         </div>
       </div>
+
+      <!-- The account row the design pins to the bottom of the sidebar. -->
+      <div class="sidebar__account">
+        <div class="sidebar__initials">{{ accountInitials }}</div>
+        <div class="sidebar__account-id">
+          <div class="sidebar__account-name">{{ accountName }}</div>
+          <div class="sidebar__account-sub">{{ t('nav.account') }}</div>
+        </div>
+        <button
+          class="sidebar__signout"
+          type="button"
+          :title="t('nav.sign-out')"
+          :aria-label="t('nav.sign-out')"
+          @click="signOut"
+        >
+          <lucide-icon name="logout" :size="15" />
+        </button>
+      </div>
     </aside>
 
     <!-- ── main ── -->
@@ -72,6 +90,7 @@ import { useEmployeeStore } from '@/stores/employee'
 import { useCustomerStore } from '@/stores/customer'
 import { useScheduleStore } from '@/stores/schedule'
 import { useServiceStore } from '@/stores/service'
+import { logout } from '@/plugins/auth'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 
 /**
@@ -95,6 +114,38 @@ const schedules = useScheduleStore()
 const services = useServiceStore()
 
 const ownerName = computed(() => owner.owner?.title || '')
+
+/**
+ * The signed-in person, from the Auth0 profile. Falls back through the fields
+ * a profile may or may not carry — `name` is optional, `email` is not always
+ * present either on social connections.
+ */
+const accountName = computed(
+  () => owner.user?.name || owner.user?.nickname || owner.user?.email || '—'
+)
+
+const accountInitials = computed(() => {
+  const source = accountName.value
+  if (!source || source === '—') return '—'
+  return (
+    source
+      .split(/[\s@._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || '—'
+  )
+})
+
+/**
+ * Auth0's logout redirects the browser away, so there is no undo once it runs
+ * and no in-app state left to tidy — hence the confirm.
+ */
+function signOut() {
+  // eslint-disable-next-line no-alert
+  if (!window.confirm(t('nav.sign-out-confirm'))) return
+  logout()
+}
 const current = computed(() => route.name)
 const locales = computed(() => availableLocales)
 
@@ -241,6 +292,70 @@ void props
   letter-spacing: 0.1em;
 }
 
+/* — the account row — */
+.sidebar__account {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.sidebar__initials {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-divider);
+  font: 600 11px var(--font-heading);
+  letter-spacing: 0.04em;
+  color: var(--color-accent-700);
+}
+
+.sidebar__account-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__account-name {
+  font: 600 12.5px/1.2 var(--font-heading);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__account-sub {
+  font: 400 9px/1.3 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  margin-top: 2px;
+}
+
+.sidebar__signout {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+  color: var(--color-neutral-700);
+}
+
+.sidebar__signout:hover {
+  color: var(--color-danger, #8f4741);
+  border-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+
 .seg-opt {
   min-height: 34px;
   padding: 0 14px;
@@ -334,7 +449,10 @@ void props
   }
 
   .sidebar__brand,
-  .sidebar__foot {
+  .sidebar__foot,
+  /* The account row cannot ride in a bar of five tabs; sign-out moves to the
+     Settings page, which is where it lives on the mobile layout. */
+  .sidebar__account {
     display: none;
   }
 

@@ -48,7 +48,12 @@ export function seedDevSession(ownerStore) {
   if (!devAuthEnabled) return
 
   ownerStore.setAuthenticated(true)
-  if (!ownerStore.user) ownerStore.setUser({ name: 'dev@localhost', email: 'dev@localhost' })
+  // The store initialises `user` to `{}`, which is truthy — guarding on the
+  // object itself meant the stand-in was never applied and anything reading a
+  // profile field (the sidebar's account row) rendered blank.
+  if (!ownerStore.user?.name) {
+    ownerStore.setUser({ name: 'dev@localhost', email: 'dev@localhost' })
+  }
 
   console.warn(
     '[dev-auth] Login is bypassed (VITE_DEV_BYPASS_AUTH). Requests carry no ' +

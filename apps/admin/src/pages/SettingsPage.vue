@@ -10,6 +10,19 @@
           <span class="row__value">{{ row.value }}</span>
           <lucide-icon name="chevron-right" :size="15" class="row__chevron" />
         </div>
+
+        <!--
+          Sign-out lives in the sidebar's account row on desktop. Below the
+          breakpoint the sidebar is five tabs with nowhere to put it, so it
+          appears here instead — one control, never two.
+        -->
+        <div class="row row--signout" @click="signOut">
+          <div class="row__main">
+            <div class="row__title">{{ t('nav.sign-out') }}</div>
+            <div class="row__note">{{ accountName }}</div>
+          </div>
+          <lucide-icon name="logout" :size="15" class="row__chevron" />
+        </div>
       </div>
 
       <employees-dialog v-model="employeesOpen" />
@@ -39,10 +52,22 @@ import LucideIcon from '@/components/ui/LucideIcon.vue'
 import EmployeesDialog from '@/components/editors/EmployeesDialog.vue'
 import { useOwnerStore } from '@/stores/owner'
 import { useEmployeeStore } from '@/stores/employee'
+import { logout } from '@/plugins/auth'
 
 const { t } = useI18n()
 const owner = useOwnerStore()
 const employees = useEmployeeStore()
+
+/** Same fallbacks as the sidebar's account row. */
+const accountName = computed(
+  () => owner.user?.name || owner.user?.nickname || owner.user?.email || ''
+)
+
+function signOut() {
+  // eslint-disable-next-line no-alert
+  if (!window.confirm(t('nav.sign-out-confirm'))) return
+  logout()
+}
 
 const ownerName = computed(() => owner.owner?.title ?? '')
 const employeesOpen = ref(false)
@@ -205,6 +230,16 @@ const subscriptionNote = computed(() => {
   font-size: 12px;
 }
 
+/* Sign-out is the sidebar's job on desktop; this row only exists below the
+   breakpoint, where the sidebar has become a tab bar. */
+.row--signout {
+  display: none;
+}
+
+.row--signout .row__title {
+  color: var(--color-accent-700);
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    Below 1024px — the design's single breakpoint.
    ────────────────────────────────────────────────────────────────────────── */
@@ -219,6 +254,10 @@ const subscriptionNote = computed(() => {
   .sub {
     width: 100%;
     max-width: none;
+  }
+
+  .row--signout {
+    display: flex;
   }
 }
 </style>
