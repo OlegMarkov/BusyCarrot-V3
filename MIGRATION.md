@@ -829,6 +829,22 @@ POST users/authenticate  { code: "123456", user: { phoneNumber: "79161234567", .
 
 The response carries the owner, the user and the token.
 
+## One table the migrations leave empty
+
+`ApplicationSettings` is created by the migrations but never seeded, and
+`SettingsRepo.GetApplicationSettings()` calls `Single` on it — so
+`settings/applicationSettings` throws "Sequence contains no elements" and
+500s. Mobile calls it on startup, so the app boots into a failed request.
+One row fixes it:
+
+```sql
+insert into "ApplicationSettings" ("MinIOSVersion", "MinAndroidVersion")
+values ('1.0.0', '1.0.0');
+```
+
+Currencies, SubscriptionTypes and Discounts are seeded by the migrations;
+only this one is not.
+
 ## Two things the stub had wrong
 
 Both were found within minutes of pointing admin at the real API, and both were
