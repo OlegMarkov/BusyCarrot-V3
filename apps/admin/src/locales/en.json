@@ -34,8 +34,8 @@
   "login": {
     "title": "Vegetable",
     "subtitle": "online booking admin site",
-    "kicker": "Owner console",
-    "tagline": "Sign in to manage your bookings, clients and hours."
+    "kicker": "Online booking system",
+    "tagline": "Simple. Smart. Reliably."
   },
   "user": {
     "logout": "logout",
