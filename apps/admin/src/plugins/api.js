@@ -2,7 +2,7 @@ import { createApiClient } from '@vegetable/api-client'
 import { createAxiosTransport } from '@vegetable/api-client/axios'
 import config from '@/config'
 import { refreshToken } from '@/plugins/auth'
-import { devAuthEnabled } from '@/plugins/dev-auth'
+import { devAuthEnabled, devApiToken } from '@/plugins/dev-auth'
 
 /**
  * Ported from vegetable/Vegetable.Admin/common/api.service.js (ApiService.init()),
@@ -28,7 +28,9 @@ export const apiClient = createApiClient({
     // This is the gate that matters most: Auth0's checkSession hangs rather than
     // failing when it cannot reach a tenant, so without it no request is made
     // at all.
-    if (devAuthEnabled) return null
+    // devApiToken lets the bypass talk to a real local API, which needs the
+    // API's own bearer token rather than an Auth0 one; null suits the stub.
+    if (devAuthEnabled) return devApiToken
 
     try {
       return await refreshToken()

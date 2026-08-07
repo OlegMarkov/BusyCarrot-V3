@@ -60,6 +60,28 @@ export const useReservationStore = defineStore('reservation', {
         .sort((a, b) => (a.startTime < b.startTime ? -1 : 1))
     },
 
+    /**
+     * The calendar's new-booking rail has always called this; it was never
+     * written, so confirming a booking threw "createReservation is not a
+     * function" and nothing left the browser. The stub never saw a request, so
+     * nothing looked wrong until the API was real.
+     *
+     * The payload must carry the nested `customer`, not just `customerId` —
+     * OwnerRepo.CreateReservation reads `reservation.Customer.Id` before doing
+     * anything else. The caller supplies it.
+     */
+    async createReservation(reservation) {
+      const { data } = await apiClient.ReservationsService.create(reservation)
+      await this.fetchReservations(this.loadedDate)
+      return data
+    },
+
+    async updateReservation(reservationId, reservation) {
+      const { data } = await apiClient.ReservationsService.update(reservationId, reservation)
+      await this.fetchReservations(this.loadedDate)
+      return data
+    },
+
     async deleteReservation(reservationId) {
       await apiClient.ReservationsService.delete(reservationId)
       await this.fetchReservations(this.loadedDate)

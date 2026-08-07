@@ -93,6 +93,10 @@ const DAY_HOURS = [
 
 const scheduleOnDay = (i) => ({
   id: `sod${i}`,
+  // The real API numbers these with a 1-based `sequence` and carries no
+  // `dayNumber`; consumers index the array positionally. Both are emitted so
+  // the stub cannot make a reader look correct that would break against it.
+  sequence: i + 1,
   dayNumber: i,
   isEnabled: DAY_HOURS[i] !== null,
   workStartTime: (DAY_HOURS[i] || DAY_HOURS[0])[0],

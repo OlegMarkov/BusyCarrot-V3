@@ -763,6 +763,96 @@ services and employees stores stayed empty for good — the Services page showed
 "0 services" against a populated API. The guard now covers everything the call
 fills.
 
+# Running the real Vegetable.API locally
+
+Everything in this document was verified against `tools/mock-owner-api.mjs`
+until this point. The stub answers the shapes the client asks for; it validates
+nothing, and it agreed with two mistakes the real API does not. Both are
+described at the end.
+
+## What it needs
+
+- **.NET 6 SDK.** `Vegetable.API` targets `net6.0`.
+- **The .NET Framework Developer Pack.** `Vegetable.Entities` is an old-style
+  project targeting `v4.7.2`, and `net6.0` can consume it — but MSBuild needs
+  reference assemblies for it. No current installer ships the 4.7.2 pack, so
+  `Vegetable.Entities.csproj` takes a `Microsoft.NETFramework.ReferenceAssemblies`
+  PackageReference instead and the build stops depending on what is installed.
+- **Postgres.** `appsettings.Local.json` expects `localhost:5432`, database
+  `vegetable`, `postgres`/`123qwe`.
+
+```
+docker run -d --name vegetable-postgres \
+  -e POSTGRES_PASSWORD=123qwe -e POSTGRES_USER=postgres -e POSTGRES_DB=vegetable \
+  -p 5432:5432 -v vegetable-pgdata:/var/lib/postgresql/data postgres:14
+
+dotnet tool install --global dotnet-ef --version 6.*
+dotnet ef database update --project Vegetable.Core --startup-project Vegetable.API
+```
+
+81 migrations, 26 tables. Then, from `Vegetable.API`:
+
+```
+dotnet run --launch-profile "Kestrel Local"
+```
+
+`launchSettings.json` only had IIS profiles, so a Kestrel one was added. HTTP
+rather than HTTPS: nothing here needs TLS and it avoids the dev-certificate
+dance. CORS is already `AllowAnyOrigin`.
+
+## Auth0 is not in the API's path
+
+Worth knowing before trying to make Auth0 work locally: you do not need to.
+
+`[AuthorizeOwner]`, the attribute on `OwnersController`, reads
+`HttpContext.Items["OwnerId"]`. That is set by `JwtMiddleware`, which validates
+an **HS256 token signed with `Configuration["Secret"]`** and reads `id` and
+`userId` claims. It is the API's own token, not an Auth0 one. Admin sends an
+Auth0 token, which this middleware cannot validate — so admin talks to a local
+API through `VITE_DEV_API_TOKEN` (see `plugins/dev-auth.js`), behind the same
+`import.meta.env.DEV` guard as the login bypass.
+
+## Getting a token
+
+`users/authenticate` issues one, valid for ten years, and creates the owner if
+the phone number is unknown. It is gated on a code the API caches, which
+`SendVerificationCall` puts there — and that has a test path: **a phone number
+containing `123456` gets the code `123456`** without any call being placed.
+
+The captcha in front of it is real, and the answer is only in the image:
+
+```
+GET  users/getcaptcha/{key}                       -> base64 GIF, read it
+GET  users/SendVerificationCall/79161234567?key={key}&captcha={answer}
+POST users/authenticate  { code: "123456", user: { phoneNumber: "79161234567", ... } }
+```
+
+The response carries the owner, the user and the token.
+
+## Two things the stub had wrong
+
+Both were found within minutes of pointing admin at the real API, and both were
+bugs in the app rather than in the stub — the stub simply never disagreed.
+
+**A reservation needs its customer object, not just the id.**
+`OwnerRepo.CreateReservation` reads `reservation.Customer.Id` before anything
+else, so `{ customerId }` alone throws a NullReferenceException and the request
+comes back 500. Admin's calendar sent exactly that.
+
+**`ScheduleType` was transposed in admin.** `week` is 0 and `switch` is 1;
+`stores/schedule.js` had them the other way round, so `weekSchedule` searched
+for a type no weekly schedule carries, every lookup returned null, and every day
+rendered closed. `apps/mobile` had it right in `constants/schedule-types.js`.
+The stub had been written to serve `scheduleType: 1` — agreeing with the wrong
+constant — which is exactly how a stub hides this class of bug.
+
+A third gap surfaced the same way: `createReservation` did not exist on admin's
+reservation store at all. The calendar had always called it, and no request had
+ever left the browser.
+
+The stub now emits `sequence` on `scheduleOnDays` the way the real API does, and
+`scheduleType: 0` for a weekly schedule.
+
 ## Running admin without Auth0
 
 Auth0 is awkward to run against locally, and its failure mode is the worst kind:

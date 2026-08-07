@@ -13,8 +13,18 @@ import { apiClient } from '@/plugins/api'
  * edit them.
  */
 
-/** Vegetable.Entities.ScheduleType */
-export const SCHEDULE_TYPE = { switch: 0, week: 1, custom: 2 }
+/**
+ * Vegetable.Entities.ScheduleType.
+ *
+ * `week` is 0 and `switch` is 1 — these were transposed here, which made
+ * `weekSchedule` search for a type no weekly schedule carries. Every lookup
+ * returned null and every day rendered closed. It went unnoticed because the
+ * in-repo stub was written to serve `scheduleType: 1`, agreeing with the wrong
+ * constant; a real Vegetable.API issues 0. apps/mobile has had it right all
+ * along in constants/schedule-types.js, and the API's own resolveScheduleOnDay
+ * branches on 0 for weekly, 1 for rotating.
+ */
+export const SCHEDULE_TYPE = { week: 0, switch: 1, custom: 2 }
 
 export const useScheduleStore = defineStore('schedule', {
   state: () => ({

@@ -40,6 +40,21 @@ export const devAuthEnabled =
   import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
 
 /**
+ * A bearer token to send while the login is bypassed.
+ *
+ * A local Vegetable.API does not accept Auth0 tokens: `JwtMiddleware` validates
+ * against a symmetric key from `Configuration["Secret"]` and reads `id` and
+ * `userId` claims, so what opens `[AuthorizeOwner]` is the API's *own* token —
+ * the one `users/authenticate` issues, valid for ten years. Paste it here and
+ * admin talks to the real API instead of a stub.
+ *
+ * Leave unset to send no token at all, which is what the in-repo mock expects.
+ * Same DEV guard as the bypass, so neither reaches a production build.
+ */
+export const devApiToken =
+  (devAuthEnabled && import.meta.env.VITE_DEV_API_TOKEN) || null
+
+/**
  * A stand-in owner, so the shell has a name to show and the route guard has
  * something truthy to read. Real values arrive from the API on the first fetch
  * and overwrite these.
@@ -56,7 +71,10 @@ export function seedDevSession(ownerStore) {
   }
 
   console.warn(
-    '[dev-auth] Login is bypassed (VITE_DEV_BYPASS_AUTH). Requests carry no ' +
-      'bearer token — point VITE_API_BASE_URL at an API that allows that.'
+    devApiToken
+      ? '[dev-auth] Login is bypassed (VITE_DEV_BYPASS_AUTH). Requests carry ' +
+          'VITE_DEV_API_TOKEN as the bearer token.'
+      : '[dev-auth] Login is bypassed (VITE_DEV_BYPASS_AUTH). Requests carry no ' +
+          'bearer token — point VITE_API_BASE_URL at an API that allows that.'
   )
 }

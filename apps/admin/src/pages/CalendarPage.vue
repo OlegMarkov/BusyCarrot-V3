@@ -409,6 +409,12 @@ async function confirmDraft() {
     startTime: start.toISOString(),
     endTime: start.clone().add(draftMinutes.value, 'minutes').toISOString(),
     customerId: draft.customerId,
+    // The nested customer is required, not a convenience: OwnerRepo's
+    // CreateReservation reads `reservation.Customer.Id` before anything else,
+    // so sending the id alone throws a NullReferenceException server-side and
+    // the request comes back 500. The in-repo stub accepted either, which is
+    // why this only surfaced against a real API.
+    customer: customers.getCustomerById?.(draft.customerId) ?? null,
     employeeId: employees.currentEmployeeId ?? employees.employees?.[0]?.id ?? null,
     cost: draftTotal.value,
     reservationServices: draft.serviceIds.map((serviceId) => ({ serviceId }))
