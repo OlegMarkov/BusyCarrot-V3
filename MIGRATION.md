@@ -30,13 +30,23 @@ npm run dev:mobile
 ```
 
 `dev:mobile` serves the H5 target on http://localhost:5175, `dev:obs` on 5174 (open
-`http://localhost:5174/{alias}`), `dev:admin` on 5173. H5 exists for development
-and layout verification only — the shipped mobile product is app-plus. Native-only
-features (push, SQLite, `plus.runtime`) are stubbed for H5 by `src/plugins/native.js`.
+`http://localhost:5174/{alias}`), `dev:admin` on 5173.
 
-For a device build, `npm run build:mobile` (`uni build -p app`), then open
-`apps/mobile/dist/build/app` in HBuilderX or DCloud cloud build. `npm run dev:admin`
-and `npm run dev:obs` serve the two web apps.
+**The H5 bundle is what ships on mobile.** It used to be a development target
+only, wrapped by HBuilderX into an app-plus build; packaging moved to Capacitor,
+which wraps a web build. `src/plugins/native.js` picks a real implementation per
+runtime — see "Packaging with Capacitor" at the end of this file.
+
+```bash
+npm run build:mobile     # H5 for Production, then cap sync
+```
+
+Then `cd apps/mobile/android && ./gradlew assembleDebug`.
+
+The HBuilderX route still works and is deliberately intact: `dev:mobile:dcloud`
+and `build:mobile:dcloud` are `uni -p app` and `uni build -p app`, whose output
+goes to `apps/mobile/dist/build/app` for HBuilderX or DCloud cloud build.
+`npm run dev:admin` and `npm run dev:obs` serve the two web apps.
 
 ## Mobile: what changed
 

@@ -84,9 +84,11 @@
             }
         }
     },
-    /* H5 is used for development and layout verification only — the shipped
-       product is app-plus. Native-only features (push, sqlite, plus.runtime)
-       are stubbed by src/plugins/native.js under #ifndef APP-PLUS. */
+    /* This block configures what actually ships. Capacitor wraps a web build,
+       so the H5 output is the packaged app; the app-plus block above is the
+       older HBuilderX route, kept working but no longer the product.
+       Hash routing and a relative base are what let the bundle be served from
+       a file-backed origin inside the WebView. */
     "h5" : {
         "router" : {
             "mode" : "hash",
