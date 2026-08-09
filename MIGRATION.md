@@ -843,25 +843,25 @@ is in **Allowed Web Origins**, **Allowed Callback URLs** and **Allowed Logout
 URLs** for client `KpF5kduqFqXVHykbcCDDMYhUI0VPboP3`. The symptom is an
 origin error in the console followed by the SSO warning Lock always prints.
 
-## Obs serves UIkit itself
+## Obs no longer uses UIkit
 
-`index.html` used to pull UIkit's stylesheet and both scripts from jsdelivr.
-UIkit drives the booking wizard's tab/switcher, the modals, the offcanvas and
-every icon, so that put the public site's core interaction behind a third party
-being reachable: lose the CDN and the page loads but cannot take a booking.
+It used to. UIkit drove the booking wizard — a tab strip bound to a switcher
+inside an offcanvas — plus the modals and every icon, and the step components
+called the `UIkit` global imperatively through `composables/wizard.js`. The
+files were vendored out of `node_modules` by `tools/vendor-uikit.mjs` rather
+than loaded from jsdelivr, so that a CDN outage could not stop the site taking
+a booking. They were classic script tags rather than an ES import because
+imported through Vite, UIkit's automatic boot does not run: 0/6 icons rendered
+and the declarative switcher never activated.
 
-The files now come from `/vendor/uikit/`, copied out of `node_modules` by
-`tools/vendor-uikit.mjs` on `predev` and `prebuild`. npm owns the version —
-`uikit` is a dependency of `apps/obs` — and the copies are gitignored because
-they are build output.
+All of that is gone. The Organic redesign replaced the wizard with one
+scrolling page, which left nothing calling into UIkit — so the dependency, the
+vendoring script, its `predev`/`prebuild` hooks, the gitignore entry and the
+composable went too. `Home.vue` and `NotFound.vue` were restyled off UIkit's
+flex and heading utilities.
 
-They are loaded as **classic script tags, not an ES import**, and that is not
-laziness. `import UIkit from 'uikit'` does yield a working object: `UIkit.tab(el)`
-and `UIkit.icon(el)` both behave when called explicitly. What does not survive
-Vite's interop is UIkit's automatic boot, the pass that scans the document for
-`uk-*` attributes — so with the import, all six `uk-icon` elements rendered
-empty and the declarative switcher never activated. Measured before and after:
-0/6 icons with the import, 6/6 with the script tags.
+The design system is now `src/styles/organic.css`; see the redesign chapter at
+the end of this file.
 
 ## Obs cannot take a booking without a reCAPTCHA key
 

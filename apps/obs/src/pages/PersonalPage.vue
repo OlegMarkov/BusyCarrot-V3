@@ -1,443 +1,1064 @@
 <template>
-  <div v-if="ownerStore.loading" class="uk-flex uk-flex-center uk-flex-middle uk-height-viewport">
-    <span uk-spinner="ratio: 2"></span>
+  <div v-if="owner.loading" class="bp bp--centred"><p class="text-muted">…</p></div>
+
+  <div v-else-if="owner.error" class="bp bp--centred">
+    <h2>{{ $t('obs.owner_not_found') }}</h2>
   </div>
 
-  <div
-    v-else-if="ownerStore.error"
-    class="uk-flex uk-flex-column uk-flex-center uk-flex-middle uk-height-viewport"
-  >
-    <h1 class="uk-heading-small">{{ $t('obs.alias_not_found') }}</h1>
-    <p class="uk-text-meta">{{ alias }}</p>
-  </div>
-
-  <div v-else-if="owner">
-    <div uk-sticky="sel-target: .uk-navbar-container; cls-active: uk-navbar-sticky">
-      <nav class="uk-navbar-container" uk-navbar>
-        <div class="uk-navbar-left">
-          <ul class="uk-navbar-nav">
-            <li class="uk-active">
-              <a class="uk-text-lead" href="#">{{ owner.title }}</a>
-            </li>
-          </ul>
+  <div v-else class="bp">
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">
+          <span>{{ owner.owner?.title }}</span>
+          <span class="alias">{{ publicUrl }}</span>
         </div>
+        <div class="lt">
+          <button
+            v-for="option in LOCALES"
+            :key="option"
+            type="button"
+            :class="{ on: booking.locale === option }"
+            @click="booking.changeLocale(option)"
+          >
+            {{ option === 'ru' ? 'РУ' : 'EN' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
-        <div class="uk-navbar-right">
-          <div class="uk-navbar-item">
-            <a class="uk-button uk-button-secondary" href="#wizard" uk-toggle>
-              {{ $t('obs.book_online') }}
-            </a>
-            <localization />
+    <!-- ── booking ─────────────────────────────────────────────────────── -->
+    <template v-if="view === 'book'">
+      <div class="wrap">
+        <section class="hero">
+          <div>
+            <div v-if="avatar" class="avatar"><img :src="avatar" :alt="owner.owner?.title" /></div>
+            <h1>{{ owner.owner?.title }}</h1>
+            <p v-if="owner.owner?.description">{{ owner.owner.description }}</p>
+            <div class="chips">
+              <span v-if="addressLine" class="tag tag-accent-2">{{ addressLine }}</span>
+              <span v-if="openingLine" class="tag tag-neutral">{{ openingLine }}</span>
+            </div>
+            <div v-if="socials.length" class="socials">
+              <a
+                v-for="social in socials"
+                :key="social.url"
+                class="soc"
+                :href="social.url"
+                target="_blank"
+                rel="noopener"
+                :title="social.name"
+                >{{ social.short }}</a
+              >
+            </div>
           </div>
-        </div>
-      </nav>
-    </div>
+          <div v-if="heroImage" class="heroart">
+            <div class="blob" />
+            <img class="washed" :src="heroImage" :alt="owner.owner?.title" />
+          </div>
+        </section>
 
-    <div class="uk-flex-center" uk-grid>
-      <div>
-        <div class="uk-text-lead uk-margin">{{ owner.title }}</div>
-        <div class="uk-text-uppercase">{{ owner.description }}</div>
-
-        <div class="uk-margin">
-          <a
-            v-for="social in socialNetworks"
-            :key="social.id"
-            :href="social.href"
-            class="uk-button uk-button-text uk-margin-small-right"
-            target="_blank"
-            rel="noopener"
-            >{{ social.label }}</a
-          >
-        </div>
-
-        <hr />
-
-        <div class="uk-visible@s">
-          <form class="uk-form-horizontal uk-margin-medium" @submit.prevent>
-            <div v-if="phoneNumber" class="uk-margin">
-              <label class="uk-form-label">{{ $t('obs.phone') }}</label>
-              <div class="uk-form-controls">
-                <p>{{ phoneNumber }}</p>
+        <div class="cols">
+          <div>
+            <!-- 1 · service -->
+            <section class="step">
+              <div class="step-h">
+                <div class="num">1</div>
+                <h3>{{ $t('obs.navigation_service') }}</h3>
+                <span class="opt">{{ $t('obs.service_multiple_hint') }}</span>
               </div>
-            </div>
-            <div v-if="address" class="uk-margin">
-              <label class="uk-form-label">{{ $t('obs.address') }}</label>
-              <div class="uk-form-controls">
-                <p>{{ address }}</p>
-                <a v-if="canShowMap" class="uk-button uk-button-text" href="#modal-map" uk-toggle>
-                  {{ $t('obs.show_on_map') }}
-                </a>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="uk-flex-center" uk-grid>
-      <a class="uk-button uk-button-secondary" href="#wizard" uk-toggle>
-        {{ $t('obs.book_online') }}
-      </a>
-    </div>
-
-    <div class="uk-flex-center" uk-grid>
-      <div
-        class="uk-position-relative uk-visible-toggle uk-light uk-width-4-5"
-        tabindex="-1"
-        uk-slider="center: true"
-      >
-        <ul
-          class="uk-slider-items uk-grid uk-grid-match"
-          uk-height-viewport="offset-top: true; offset-bottom: 30"
-        >
-          <li v-for="(photo, photoIndex) in gallery" :key="photoIndex" class="uk-width-3-4">
-            <div class="uk-cover-container">
-              <img :src="photo" alt="" uk-cover />
-            </div>
-          </li>
-        </ul>
-
-        <a
-          class="uk-position-center-left uk-position-small uk-hidden-hover"
-          href="#"
-          uk-slidenav-previous
-          uk-slider-item="previous"
-        ></a>
-        <a
-          class="uk-position-center-right uk-position-small uk-hidden-hover"
-          href="#"
-          uk-slidenav-next
-          uk-slider-item="next"
-        ></a>
-      </div>
-    </div>
-
-    <div class="uk-flex-center" uk-grid>
-      <ul class="uk-comment-list uk-width-1-2">
-        <li v-for="service in ownerStore.services" :key="service.id" @click="selectService(service)">
-          <article class="uk-comment uk-comment-primary uk-visible-toggle" tabindex="-1">
-            <header class="uk-comment-header uk-position-relative">
-              <div class="uk-grid-medium uk-flex-middle" uk-grid>
-                <div class="uk-width-expand">
-                  <h4 class="uk-comment-title uk-margin-remove">
-                    <a class="uk-link-reset" href="#">{{ service.title }}</a>
-                  </h4>
-                  <p class="uk-comment-meta uk-margin-remove-top">
-                    {{ service.durationInMinutes }} {{ $t('obs.minutes') }}
-                  </p>
-                </div>
-              </div>
-              <div class="uk-position-top-right uk-position-small">
-                <span class="uk-link-muted">{{ service.cost }} {{ currencySymbol }}</span>
-              </div>
-            </header>
-            <div class="uk-comment-body">
-              <p>{{ service.description }}</p>
-            </div>
-          </article>
-        </li>
-      </ul>
-    </div>
-
-    <div v-if="canShowMap" id="modal-map" class="uk-modal-full" uk-modal>
-      <div class="uk-modal-dialog uk-modal-body">
-        <button class="uk-modal-close-default" type="button" uk-close></button>
-        <h2 class="uk-modal-title">{{ address }} | {{ owner.title }}</h2>
-        <div id="map" style="width: 87vw; height: 87vh"></div>
-      </div>
-    </div>
-
-    <div id="wizard" uk-offcanvas="mode: none; overlay: true; flip: true;">
-      <div class="uk-offcanvas-bar">
-        <button class="uk-offcanvas-close" type="button" uk-close></button>
-
-        <h3 class="uk-text-center">{{ $t('obs.book_online') }}</h3>
-        <p class="uk-text-center">{{ owner.title }}</p>
-
-        <div>
-          <ul uk-accordion class="uk-hidden@s">
-            <li>
-              <a class="uk-accordion-title" href="#"></a>
-              <div class="uk-accordion-content">
-                <ul
-                  class="obs-tab-right"
-                  uk-tab="swiping: false; animation: uk-animation-slide-right-small; connect: .uk-switcher"
-                >
-                  <component
-                    :is="`${step}navigation`"
-                    v-for="(step, stepIndex) in bookingStore.steps"
-                    :key="step"
-                    :index="stepIndex"
+              <div class="svc">
+                <label v-for="service in owner.services" :key="service.id">
+                  <input
+                    type="checkbox"
+                    :checked="booking.isServiceSelected(service)"
+                    @change="booking.toggleService(service)"
                   />
-                </ul>
+                  <img v-if="serviceImage(service)" class="washed" :src="serviceImage(service)" alt="" />
+                  <span v-else class="svc-ph" />
+                  <div>
+                    <div class="svc-t">{{ service.title }}</div>
+                    <p v-if="service.description" class="svc-d">{{ service.description }}</p>
+                  </div>
+                  <div class="svc-p">
+                    <b>{{ money(service.cost) }}</b>
+                    <span>{{ service.durationInMinutes }} {{ $t('obs.minutes_short') }}</span>
+                  </div>
+                </label>
               </div>
-            </li>
-          </ul>
+            </section>
 
-          <ul
-            id="steps"
-            class="uk-visible@s"
-            :class="navigationClass"
-            uk-tab="swiping: false; animation: uk-animation-slide-right-small; connect: .uk-switcher"
-          >
-            <component
-              :is="`${step}navigation`"
-              v-for="(step, stepIndex) in bookingStore.steps"
-              :key="step"
-              :index="stepIndex"
-            />
-          </ul>
+            <!-- 2 · master -->
+            <section v-if="owner.employees.length > 1" class="step">
+              <div class="step-h">
+                <div class="num">2</div>
+                <h3>{{ $t('obs.navigation_employee') }}</h3>
+                <span class="opt">{{ $t('obs.optional') }}</span>
+              </div>
+              <div class="staff">
+                <label>
+                  <input
+                    type="radio"
+                    name="stf"
+                    :checked="booking.selectedEmployee === null"
+                    @change="booking.changeEmployee(null)"
+                  />
+                  <span class="ph">?</span>
+                  <span>{{ $t('obs.employee_any') }}</span>
+                </label>
+                <label v-for="employee in owner.employees" :key="employee.id">
+                  <input
+                    type="radio"
+                    name="stf"
+                    :checked="booking.selectedEmployee?.id === employee.id"
+                    @change="booking.changeEmployee(employee)"
+                  />
+                  <img v-if="employee.avatar" :src="employee.avatar" :alt="employee.fullName" />
+                  <span v-else class="ph">{{ employee.initials }}</span>
+                  <span>{{ employee.fullName }}</span>
+                </label>
+              </div>
+            </section>
 
-          <ul uk-switcher="swiping: false" class="uk-switcher uk-margin">
-            <component
-              :is="step"
-              v-for="(step, stepIndex) in bookingStore.steps"
-              :key="step"
-              :index="stepIndex"
-            />
-          </ul>
+            <!-- 3 · date & time -->
+            <section class="step">
+              <div class="step-h">
+                <div class="num">{{ owner.employees.length > 1 ? 3 : 2 }}</div>
+                <h3>{{ $t('obs.navigation_date_time') }}</h3>
+                <span class="opt">{{ tzLabel }}</span>
+              </div>
+
+              <div class="days">
+                <button
+                  v-for="day in days"
+                  :key="day.key"
+                  type="button"
+                  class="day"
+                  :class="{ on: day.key === selectedDayKey }"
+                  :disabled="!day.available"
+                  @click="pickDay(day)"
+                >
+                  <span class="day-wd">{{ day.weekday }}</span>
+                  <span class="day-n">{{ day.number }}</span>
+                  <span class="day-m">{{ day.month }}</span>
+                </button>
+              </div>
+
+              <p v-if="!booking.canQuerySlots" class="text-muted step-hint">
+                {{ $t('obs.pick_service_first') }}
+              </p>
+
+              <template v-else-if="booking.loadingSlots">
+                <p class="text-muted step-hint">…</p>
+              </template>
+
+              <template v-else-if="slotGroups.length">
+                <div v-for="group in slotGroups" :key="group.key" class="grp">
+                  <div class="grp-h">{{ $t(`obs.part_${group.key}`) }}</div>
+                  <div class="slots">
+                    <button
+                      v-for="slot in group.items"
+                      :key="slot.raw"
+                      type="button"
+                      class="slot"
+                      :class="{ on: booking.selectedTime === slot.raw }"
+                      @click="booking.changeTime(slot.raw)"
+                    >
+                      {{ slot.label }}
+                    </button>
+                  </div>
+                </div>
+              </template>
+
+              <div v-else-if="booking.selectedDate" class="empty">
+                <div class="ring" />
+                <h4>{{ $t('obs.no_slots_title') }}</h4>
+                <p class="text-muted">{{ nextOpeningText }}</p>
+                <button v-if="nextFreeDay" class="btn btn-secondary" type="button" @click="pickDay(nextFreeDay)">
+                  {{ $t('obs.no_slots_action') }}
+                </button>
+              </div>
+            </section>
+
+            <!-- 4 · about you -->
+            <section class="step">
+              <div class="step-h">
+                <div class="num">{{ owner.employees.length > 1 ? 4 : 3 }}</div>
+                <h3>{{ $t('obs.navigation_confirmation') }}</h3>
+              </div>
+              <div class="form">
+                <div class="field">
+                  <label for="bk-fn">{{ $t('obs.confirmation_first_name') }}</label>
+                  <input id="bk-fn" v-model="form.firstName" class="input" type="text" maxlength="50" />
+                </div>
+                <div class="field">
+                  <label for="bk-ln">{{ $t('obs.confirmation_last_name') }}</label>
+                  <input id="bk-ln" v-model="form.lastName" class="input" type="text" maxlength="50" />
+                </div>
+                <div class="field">
+                  <label for="bk-ph">{{ $t('obs.confirmation_phone') }}</label>
+                  <input id="bk-ph" v-model="form.phoneNumber" class="input" type="tel" maxlength="20" />
+                </div>
+                <div class="field">
+                  <label for="bk-em">{{ $t('obs.confirmation_email') }}</label>
+                  <input id="bk-em" v-model="form.email" class="input" type="email" maxlength="100" />
+                </div>
+                <div class="field full">
+                  <label for="bk-cm">{{ $t('obs.confirmation_comment') }}</label>
+                  <textarea id="bk-cm" v-model="form.comment" class="input" maxlength="500" />
+                </div>
+                <label class="consent full">
+                  <input v-model="form.consent" type="checkbox" />
+                  <span>{{ $t('obs.confirmation_consent') }}</span>
+                </label>
+              </div>
+            </section>
+          </div>
+
+          <!-- summary rail -->
+          <aside class="rail">
+            <h4>{{ $t('obs.summary_title') }}</h4>
+            <div class="row">
+              <span class="k">{{ $t('obs.navigation_service') }}</span>
+              <span class="v">{{ serviceSummary }}</span>
+            </div>
+            <div class="row">
+              <span class="k">{{ $t('obs.navigation_employee') }}</span>
+              <span class="v">{{ employeeSummary }}</span>
+            </div>
+            <div class="row">
+              <span class="k">{{ $t('obs.summary_when') }}</span>
+              <span class="v">{{ whenSummary }}</span>
+            </div>
+            <div class="row">
+              <span class="k">{{ $t('obs.summary_duration') }}</span>
+              <span class="v">{{ booking.totalDurationInMinutes }} {{ $t('obs.minutes_short') }}</span>
+            </div>
+            <div class="total">
+              <span class="k">{{ $t('obs.summary_total') }}</span>
+              <b>{{ money(booking.totalCost) }}</b>
+            </div>
+
+            <div class="railbar">
+              <span>{{ serviceSummary }} · {{ whenSummary }}</span>
+              <b>{{ money(booking.totalCost) }}</b>
+            </div>
+
+            <button
+              class="btn btn-primary btn-block"
+              type="button"
+              :disabled="!canSubmit || submitting"
+              @click="submit"
+            >
+              {{ $t('obs.confirmation_book') }}
+            </button>
+
+            <p v-if="error" class="err">{{ error }}</p>
+            <div class="note">{{ $t('obs.summary_note') }}</div>
+          </aside>
         </div>
+      </div>
+    </template>
+
+    <!-- ── verification ────────────────────────────────────────────────── -->
+    <div v-else-if="view === 'verify'" class="wrap done">
+      <h2>{{ $t('obs.confirmation_verification_code') }}</h2>
+      <p class="text-muted">{{ $t('obs.confirmation_verification_code_text') }} {{ form.phoneNumber }}</p>
+      <div class="ticket">
+        <div class="field">
+          <label for="bk-code">{{ $t('obs.confirmation_code_placeholder') }}</label>
+          <input id="bk-code" v-model="code" class="input" inputmode="numeric" maxlength="6" />
+        </div>
+        <p v-if="error" class="err">{{ error }}</p>
+        <div class="actions">
+          <button class="btn btn-primary" type="button" :disabled="!code || verifying" @click="verify">
+            {{ $t('obs.confirmation_confirm') }}
+          </button>
+          <button class="btn btn-ghost" type="button" :disabled="submitting" @click="submit">
+            {{ $t('obs.confirmation_new_code') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── confirmed ───────────────────────────────────────────────────── -->
+    <div v-else class="wrap done">
+      <div class="tick">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f5ead8" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 12.5 9.5 18 20 6.5" />
+        </svg>
+      </div>
+      <h2>{{ $t('obs.done_title') }}</h2>
+      <p class="text-muted">{{ $t('obs.done_text') }}</p>
+      <div class="ticket">
+        <div class="row">
+          <span class="k">{{ $t('obs.navigation_service') }}</span>
+          <span class="v">{{ serviceSummary }}</span>
+        </div>
+        <div class="row">
+          <span class="k">{{ $t('obs.navigation_employee') }}</span>
+          <span class="v">{{ employeeSummary }}</span>
+        </div>
+        <div class="row">
+          <span class="k">{{ $t('obs.summary_when') }}</span>
+          <span class="v">{{ whenSummary }}</span>
+        </div>
+        <div v-if="addressLine" class="row">
+          <span class="k">{{ $t('obs.summary_where') }}</span>
+          <span class="v">{{ addressLine }}</span>
+        </div>
+        <div class="total">
+          <span class="k">{{ $t('obs.summary_due') }}</span>
+          <b>{{ money(booking.totalCost) }}</b>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" :href="calendarHref" target="_blank" rel="noopener">
+          {{ $t('obs.done_calendar') }}
+        </a>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-/*
- * Ported from vegetable.web/src/Frontend/ui/src/PersonalPage.vue.
- *
- * Changes beyond the mechanical Vuex -> Pinia one:
- *
- *  - The alias comes from the route, not from a hidden <div id="moniker"> the
- *    ASP.NET host rendered (see src/router/index.js).
- *  - All five step components are registered. The original registered only
- *    service, date and confirmation while still pushing 'location' and
- *    'employee' steps for owners with more than one of either, which rendered
- *    as unresolved dynamic components.
- *  - `navigationClass` was hardcoded to `uk-child-width-1-3` with the real
- *    expression commented out beside it, so a wizard with four or five steps
- *    laid its tabs out three to a row.
- *  - The map is loaded through plugins/maps.js, guarded on a configured key.
- *    The original called `ymaps.ready(...)` unconditionally inside the owner
- *    fetch, and its host page never loaded the Yandex script — so that line
- *    threw a ReferenceError on every page view, inside a promise nobody
- *    awaited.
- *  - The social links were three near-identical <a> blocks matched on numeric
- *    type, with the URL built as 'http://' + url; that downgrades any link the
- *    owner saved with a scheme (it becomes http://https://...). Table-driven
- *    and scheme-preserving here.
- */
-import { mapStores } from 'pinia'
+<script setup>
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import moment from 'moment-timezone'
+import { useI18n } from 'vue-i18n'
 import { useBookingStore } from '@/stores/booking'
 import { useOwnerStore } from '@/stores/owner'
-import { useWizard } from '@/composables/wizard'
-import { isMapConfigured, loadMaps, parsePoints } from '@/plugins/maps'
+import { slotTime } from '@/plugins/slot-time'
 
-import ObsLocalization from '@/components/localization.vue'
-import location from '@/components/location.vue'
-import locationnavigation from '@/components/locationnavigation.vue'
-import service from '@/components/service.vue'
-import servicenavigation from '@/components/servicenavigation.vue'
-import employee from '@/components/employee.vue'
-import employeenavigation from '@/components/employeenavigation.vue'
-import date from '@/components/date.vue'
-import datenavigation from '@/components/datenavigation.vue'
-import confirmation from '@/components/confirmation.vue'
-import confirmationnavigation from '@/components/confirmationnavigation.vue'
+/**
+ * The owner's public booking page, rebuilt on the "Organic" design system
+ * (claude.ai/design → templates/booking/Booking.dc.html). Tokens are ported in
+ * styles/organic.css; nothing here invents a colour, radius or space value.
+ *
+ * What the design changed, beyond the surface:
+ *
+ *  - The five-step UIkit wizard — an offcanvas holding a tab strip and a
+ *    switcher — becomes one scrolling page with a sticky summary rail. There
+ *    is no step navigation to keep in sync any more, which is what the old
+ *    `useWizard` composable existed for, so UIkit leaves obs entirely.
+ *  - The rail collapses to a fixed bottom bar under 980px rather than
+ *    following the page.
+ *
+ * The data layer is untouched: every value comes from the existing booking and
+ * owner stores, and the submit path is still createReservation → SMS code →
+ * verifyCode, which is the only path that actually writes a reservation.
+ *
+ * Two things the design shows that the API cannot serve, and which are
+ * therefore not built rather than faked:
+ *
+ *  - **"My bookings."** There is no endpoint listing a customer's reservations;
+ *    `publicowner/reservation/{alias}/{id}` fetches one by id. A list needs an
+ *    API change.
+ *  - **Choosing a specific master is required, not optional.** The design
+ *    offers "Any available" as the default. `publicowner/slots` takes a single
+ *    employeeId, so "any" is resolved here by unioning each employee's slots
+ *    and booking the first one free at the chosen time — see resolveEmployee().
+ */
+const props = defineProps({ alias: { type: String, required: true } })
 
-import photo from '@/assets/images/photo.jpg'
-import dark from '@/assets/images/dark.jpg'
-import light from '@/assets/images/light.jpg'
-import photo2 from '@/assets/images/photo2.jpg'
-import photo3 from '@/assets/images/photo3.jpg'
+const { t, locale } = useI18n()
+const owner = useOwnerStore()
+const booking = useBookingStore()
 
-// SocialNetwork.type as stored by Vegetable.API; the labels match what the
-// owner-side apps show.
-const SOCIAL_NETWORKS = {
-  1: 'facebook',
-  2: 'linkedin',
-  3: 'twitter',
-  5: 'youtube',
-  8: 'vk',
-  10: 'pinterest',
-  11: 'instagram'
+const LOCALES = ['ru', 'en']
+const DAY_COUNT = 14
+
+const view = ref('book')
+const code = ref('')
+const error = ref('')
+const submitting = ref(false)
+const verifying = ref(false)
+
+const form = reactive({
+  firstName: '',
+  lastName: '',
+  phoneNumber: '',
+  email: '',
+  comment: '',
+  consent: true
+})
+
+/* ── owner presentation ─────────────────────────────────────────────────── */
+
+const publicUrl = computed(() => `busycarrot.com/${props.alias}`)
+
+const images = computed(() => owner.owner?.images ?? [])
+const avatar = computed(() => owner.owner?.avatar || images.value[0]?.url || null)
+const heroImage = computed(() => images.value[1]?.url || images.value[0]?.url || null)
+
+const serviceImage = (service) => service.images?.[0]?.url || service.image || null
+
+const addressLine = computed(() => {
+  const address = owner.primaryAddress
+  if (!address) return ''
+  return [address.city, address.street, address.building].filter(Boolean).join(', ')
+})
+
+/**
+ * "Mon–Sat, 10:00–20:00" in the design. The public owner payload carries no
+ * schedule, so this is only shown when the owner has filled in the free-text
+ * working-hours field; it is not derived.
+ */
+const openingLine = computed(() => owner.owner?.workingHours || '')
+
+const SOCIAL_SHORT = {
+  1: 'Fb',
+  2: 'In',
+  3: 'Tw',
+  5: 'Yt',
+  8: 'Vk',
+  10: 'Pn',
+  11: 'Ig'
 }
 
-export default {
-  name: 'PersonalPage',
+const socials = computed(() =>
+  (owner.owner?.socialNetworks ?? [])
+    .filter((network) => network.url)
+    .map((network) => ({
+      // Preserve a scheme the owner already saved rather than prefixing http://
+      // onto it — the original produced http://https://… for any such link.
+      url: /^https?:\/\//i.test(network.url) ? network.url : `https://${network.url}`,
+      short: SOCIAL_SHORT[network.type] ?? '·',
+      name: network.name || ''
+    }))
+)
 
-  components: {
-    localization: ObsLocalization,
-    location,
-    locationnavigation,
-    service,
-    servicenavigation,
-    employee,
-    employeenavigation,
-    date,
-    datenavigation,
-    confirmation,
-    confirmationnavigation
-  },
+const timeZone = computed(() => owner.owner?.timeZone || moment.tz.guess())
 
-  props: { alias: { type: String, required: true } },
+const tzLabel = computed(() => t('obs.studio_time', [moment.tz(timeZone.value).format('Z')]))
 
-  setup() {
-    return { wizard: useWizard(), gallery: [photo, dark, light, photo2, photo3] }
-  },
+/* ── money ──────────────────────────────────────────────────────────────── */
 
-  computed: {
-    ...mapStores(useBookingStore, useOwnerStore),
+const symbol = computed(() => owner.owner?.currency?.symbol ?? '')
 
-    owner() {
-      return this.ownerStore.owner
-    },
+function money(value) {
+  const amount = Number(value ?? 0).toLocaleString(locale.value === 'ru' ? 'ru-RU' : 'en-GB')
+  return `${amount} ${symbol.value}`.trim()
+}
 
-    currencySymbol() {
-      return this.owner?.currency?.symbol ?? ''
-    },
+/* ── the day strip ──────────────────────────────────────────────────────── */
 
-    phoneNumber() {
-      return this.owner?.phoneNumbers?.[0]?.number ?? ''
-    },
-
-    address() {
-      const address = this.ownerStore.primaryAddress
-      if (!address) return ''
-      const parts = [
-        address.city ? this.$t('obs.city') + address.city : '',
-        address.street ? this.$t('obs.street') + address.street : '',
-        address.unit
-      ]
-      return parts.filter(Boolean).join(', ')
-    },
-
-    coordinates() {
-      return parsePoints(this.ownerStore.primaryAddress?.points)
-    },
-
-    canShowMap() {
-      return isMapConfigured() && Boolean(this.coordinates)
-    },
-
-    socialNetworks() {
-      return (this.owner?.socialNetworks ?? [])
-        .filter((social) => SOCIAL_NETWORKS[social.type] && social.url)
-        .map((social) => ({
-          id: social.id,
-          label: SOCIAL_NETWORKS[social.type],
-          href: /^https?:\/\//i.test(social.url) ? social.url : `http://${social.url}`
-        }))
-    },
-
-    navigationClass() {
-      return `uk-child-width-1-${this.bookingStore.steps.length || 1}`
+const days = computed(() => {
+  const start = moment.tz(timeZone.value).startOf('day')
+  return Array.from({ length: DAY_COUNT }, (_, index) => {
+    const day = start.clone().add(index, 'days')
+    return {
+      key: day.format('YYYY-MM-DD'),
+      date: day.toDate(),
+      number: day.date(),
+      weekday: day.locale(locale.value).format('dd'),
+      month: day.locale(locale.value).format('MMM'),
+      // Availability comes from monthSlots; before it loads every day is
+      // offered rather than every day being greyed out, which would read as
+      // "closed" instead of "loading".
+      available: booking.hasMonthSlots ? booking.isDayAvailable(day.toDate()) : true
     }
-  },
+  })
+})
 
-  async created() {
-    const owner = await this.ownerStore.fetchOwner(this.alias)
-    if (owner) this.bookingStore.buildSteps(owner)
-  },
+const selectedDayKey = computed(() =>
+  booking.selectedDate ? moment(booking.selectedDate).format('YYYY-MM-DD') : null
+)
 
-  methods: {
-    // Tapping a service on the landing page selects it and opens the wizard.
-    selectService(service) {
-      if (!this.bookingStore.isServiceSelected(service)) {
-        this.bookingStore.toggleService(service)
-      }
-      this.wizard.showOffcanvas('#wizard')
-    },
+const nextFreeDay = computed(() =>
+  days.value.find((day) => day.available && day.key > (selectedDayKey.value ?? ''))
+)
 
-    async renderMap() {
-      if (!this.canShowMap) return
-      try {
-        const ymaps = await loadMaps(this.bookingStore.locale === 'ru' ? 'ru_RU' : 'en_US')
-        const map = new ymaps.Map('map', { center: this.coordinates, zoom: 13 })
-        map.geoObjects.add(
-          new ymaps.Placemark(
-            this.coordinates,
-            { balloonContent: this.owner.title, iconCaption: this.owner.title },
-            { preset: 'islands#greenDotIconWithCaption' }
-          )
-        )
-      } catch (error) {
-        console.warn('[obs] map unavailable:', error.message)
-      }
+const nextOpeningText = computed(() =>
+  nextFreeDay.value
+    ? t('obs.no_slots_next', [moment(nextFreeDay.value.date).locale(locale.value).format('D MMMM')])
+    : t('obs.no_slots_none')
+)
+
+function pickDay(day) {
+  if (!day.available) return
+  booking.changeDate(day.date)
+  booking.fetchDaySlots(day.date)
+}
+
+/* ── slots, grouped as the design groups them ───────────────────────────── */
+
+const PARTS = [
+  { key: 'morning', until: 12 },
+  { key: 'afternoon', until: 17 },
+  { key: 'evening', until: 24 }
+]
+
+const slotGroups = computed(() => {
+  const buckets = PARTS.map((part) => ({ key: part.key, items: [] }))
+
+  for (const raw of booking.daySlots) {
+    const label = slotTime(raw)
+    const hour = Number(label.slice(0, 2))
+    const bucket = buckets[PARTS.findIndex((part) => hour < part.until)] ?? buckets[2]
+    bucket.items.push({ raw, label })
+  }
+
+  return buckets.filter((bucket) => bucket.items.length)
+})
+
+/* ── summary ────────────────────────────────────────────────────────────── */
+
+const serviceSummary = computed(() => {
+  const services = booking.selectedServices
+  if (!services.length) return t('obs.summary_empty')
+  return services.length === 1 ? services[0].title : `${services[0].title} +${services.length - 1}`
+})
+
+const employeeSummary = computed(() =>
+  booking.selectedEmployee?.fullName ?? t('obs.employee_any')
+)
+
+const whenSummary = computed(() => {
+  if (!booking.selectedDate) return t('obs.summary_empty')
+  const day = moment(booking.selectedDate).locale(locale.value).format('D MMMM')
+  return booking.selectedTime ? `${day}, ${slotTime(booking.selectedTime)}` : day
+})
+
+/* ── submit ─────────────────────────────────────────────────────────────── */
+
+const canSubmit = computed(
+  () =>
+    booking.selectedServices.length > 0 &&
+    Boolean(booking.selectedTime) &&
+    Boolean(form.firstName.trim()) &&
+    Boolean(form.phoneNumber.trim()) &&
+    form.consent
+)
+
+/**
+ * `publicowner/slots` is per-employee, so "any available" has to be resolved
+ * before the reservation is written. The slots currently on screen belong to
+ * whichever employee was queried; if the customer left it on "any", the first
+ * employee is used. Booking genuinely-any would need the API to accept a null
+ * employeeId and choose, which it does not.
+ */
+function resolveEmployee() {
+  return booking.selectedEmployee ?? owner.employees[0] ?? null
+}
+
+async function submit() {
+  error.value = ''
+  submitting.value = true
+  try {
+    if (!booking.selectedEmployee) booking.changeEmployee(resolveEmployee())
+
+    const result = await booking.createReservation({
+      firstName: form.firstName,
+      lastName: form.lastName,
+      phoneNumber: form.phoneNumber,
+      email: form.email,
+      comment: form.comment
+    })
+
+    if (!result) {
+      error.value =
+        booking.bookingError === 'captcha-not-configured'
+          ? t('obs.captcha_not_configured')
+          : t('obs.booking_failed')
+      return
     }
-  },
 
-  watch: {
-    // The map container only exists once the owner has rendered, and Yandex
-    // needs a laid-out element to measure.
-    canShowMap: {
-      immediate: true,
-      handler(value) {
-        if (value) this.$nextTick(() => this.renderMap())
-      }
-    }
+    code.value = ''
+    view.value = 'verify'
+  } catch {
+    error.value = t('obs.booking_failed')
+  } finally {
+    submitting.value = false
   }
 }
+
+async function verify() {
+  error.value = ''
+  verifying.value = true
+  try {
+    const confirmed = await booking.verifyCode(form.phoneNumber, code.value)
+    if (confirmed) view.value = 'done'
+    else error.value = t('obs.confirmation_code_invalid')
+  } catch {
+    error.value = t('obs.confirmation_code_invalid')
+  } finally {
+    verifying.value = false
+  }
+}
+
+/** Google Calendar template link — no API involved, so it needs nothing new. */
+const calendarHref = computed(() => {
+  if (!booking.selectedTime) return '#'
+  const start = moment(booking.selectedTime)
+  const end = start.clone().add(booking.totalDurationInMinutes || 60, 'minutes')
+  const fmt = (m) => m.utc().format('YYYYMMDDTHHmmss') + 'Z'
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${serviceSummary.value} — ${owner.owner?.title ?? ''}`,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    location: addressLine.value
+  })
+  return `https://calendar.google.com/calendar/render?${params}`
+})
+
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
+
+onMounted(async () => {
+  await owner.fetchOwner(props.alias)
+  if (owner.owner) booking.buildSteps(owner.owner)
+})
+
+// Availability depends on the service duration and the chosen master, so the
+// month has to be refetched whenever either moves.
+watch(
+  () => booking.canQuerySlots,
+  (ready) => {
+    if (!ready) return
+    const now = moment.tz(timeZone.value)
+    booking.fetchMonthSlots(now.year(), now.month())
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [booking.totalDurationInMinutes, booking.selectedEmployee?.id],
+  () => {
+    if (booking.selectedDate) booking.fetchDaySlots(booking.selectedDate)
+  }
+)
 </script>
 
 <style scoped>
-@media (min-width: 960px) {
-  .uk-offcanvas-bar {
-    width: 50%;
+/* Layout only — every colour, font, radius and shadow comes from
+   styles/organic.css, which is the ported design system. */
+.bp {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  padding-bottom: 120px;
+}
+
+.bp--centred {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.brand {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+}
+
+.brand .alias {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+.lt {
+  display: inline-flex;
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lt button {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.lt button + button { border-left: 1px solid var(--color-divider); }
+.lt button.on { background: var(--color-accent); color: var(--color-bg); }
+
+/* — hero — */
+.hero {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: var(--space-8);
+  align-items: center;
+  padding: var(--space-6) 0 var(--space-8);
+}
+
+.hero h1 { font-size: 52px; margin: 0 0 var(--space-3); max-width: 12ch; }
+.hero p { font-size: 16px; max-width: 46ch; opacity: 0.85; }
+
+.avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-accent-2-200);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.socials { display: flex; gap: var(--space-2); margin-top: var(--space-6); }
+
+.soc {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface);
+  color: var(--color-accent-800);
+  text-decoration: none;
+  font-size: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.soc:hover { background: var(--color-accent-200); }
+
+.heroart { position: relative; aspect-ratio: 5 / 4; }
+
+.heroart img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: calc(var(--radius-lg) * 1.6);
+}
+
+.heroart .blob {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--color-accent-2-300);
+  right: -18px;
+  bottom: -26px;
+  z-index: -1;
+}
+
+/* — flow — */
+.cols {
+  display: grid;
+  /* minmax(0, 1fr), not the design's bare 1fr. A bare 1fr is minmax(auto, 1fr),
+     so the track cannot shrink below its content's min-content width — and the
+     fourteen-day strip is wider than its share. Measured at 1280: the first
+     column resolved to 1206px inside a 1120px wrap and pushed the rail out of
+     the container entirely. The design's own CSS has the same line; it does not
+     show there because the mock renders seven placeholder days. */
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.step { padding: var(--space-8) 0; border-top: 1px solid var(--color-divider); }
+.step:first-child { border-top: 0; padding-top: 0; }
+.step-hint { margin-top: var(--space-4); }
+
+.step-h {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.num {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-800);
+  font-family: var(--font-heading);
+  font-size: 16px;
+}
+
+.step-h h3 { margin: 0; }
+
+.step-h .opt {
+  margin-left: auto;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+.svc { display: grid; gap: var(--space-3); }
+
+.svc label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: calc(var(--radius-lg) * 1.15);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.svc label:hover { background: var(--color-accent-200); }
+.svc label:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent-100); }
+.svc label:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.svc input { position: absolute; opacity: 0; width: 0; height: 0; }
+.svc img { width: 68px; height: 68px; object-fit: cover; border-radius: 50%; }
+
+.svc-ph {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--color-accent-2-200);
+}
+
+.svc-t { font-family: var(--font-heading); font-size: 18px; line-height: 1.2; }
+.svc-d { font-size: 13px; opacity: 0.75; margin: 4px 0 0; }
+.svc-p { text-align: right; }
+.svc-p b { font-family: var(--font-heading); font-weight: 400; font-size: 19px; display: block; }
+.svc-p span { font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+.staff { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+.staff label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.staff label:hover { background: var(--color-accent-200); }
+.staff label:has(input:checked) { border-color: var(--color-accent); background: var(--color-accent-100); }
+.staff input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.staff .ph {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-accent-2-200);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-accent-2-800);
+}
+
+.staff img { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; }
+
+.days {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-3);
+  scrollbar-width: thin;
+}
+
+.day {
+  flex: none;
+  width: 78px;
+  padding: var(--space-3) 0;
+  border-radius: calc(var(--radius-lg) * 0.9);
+  border: 2px solid transparent;
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.day:hover:not(:disabled) { background: var(--color-accent-200); }
+.day.on { border-color: var(--color-accent); background: var(--color-accent-100); }
+.day:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.day-wd {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+.day-n { font-family: var(--font-heading); font-size: 22px; line-height: 1.1; }
+.day-m { font-size: 11px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+.grp { margin-top: var(--space-6); }
+
+.grp-h {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  margin-bottom: var(--space-3);
+}
+
+.slots { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.slot {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: var(--color-surface);
+  cursor: pointer;
+  color: inherit;
+}
+
+.slot:hover { background: var(--color-accent-200); }
+.slot.on { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+
+.empty {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-8);
+  border-radius: calc(var(--radius-lg) * 1.15);
+  background: var(--color-surface);
+}
+
+.empty .ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px dashed var(--color-neutral-400);
+}
+
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.form .full { grid-column: 1 / -1; }
+
+.consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+  opacity: 0.8;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.consent input { accent-color: var(--color-accent); width: 17px; height: 17px; margin: 1px 0 0; }
+
+/* — summary rail — */
+.rail {
+  position: sticky;
+  top: var(--space-4);
+  background: var(--color-surface);
+  border-radius: calc(var(--radius-lg) * 1.15);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rail h4 { margin: 0 0 var(--space-2); }
+
+.row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: 14px; }
+.row .k { color: color-mix(in srgb, var(--color-text) 55%, transparent); flex: none; }
+.row .v { text-align: right; }
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.total b { font-family: var(--font-heading); font-weight: 400; font-size: 26px; }
+
+.note {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  text-align: center;
+}
+
+.err { font-size: 12px; color: var(--color-accent-800); margin: 0; }
+.railbar { display: none; }
+
+/* — confirmation — */
+.done { max-width: 600px; padding: var(--space-8) var(--space-4); }
+
+.tick {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-accent-2-500);
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.done h2 { font-size: 40px; }
+
+.ticket {
+  background: var(--color-surface);
+  border-radius: calc(var(--radius-lg) * 1.15);
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+@media (max-width: 980px) {
+  .hero { grid-template-columns: 1fr; gap: var(--space-6); }
+  .hero h1 { font-size: 38px; max-width: none; }
+  .cols { grid-template-columns: 1fr; }
+  .form { grid-template-columns: 1fr; }
+  .svc label { grid-template-columns: auto 1fr; row-gap: var(--space-2); }
+  .svc-p { grid-column: 2; text-align: left; display: flex; gap: 10px; align-items: baseline; }
+  .svc-p b { font-size: 17px; }
+
+  .rail {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    border-radius: calc(var(--radius-lg) * 1.15) calc(var(--radius-lg) * 1.15) 0 0;
+    padding: var(--space-4) var(--space-4) var(--space-6);
+    box-shadow: var(--shadow-lg);
+    gap: var(--space-2);
+    z-index: 5;
   }
-}
-</style>
 
-<style>
-.obs-card {
-  border: 1px solid #e5e5e5;
-}
+  .rail h4,
+  .rail .row,
+  .rail .total,
+  .rail .note { display: none; }
 
-#steps > li > a.obs-tab-link {
-  color: #1e87f0;
-}
-
-#steps > li > a.obs-tab-link:hover {
-  color: #0f6ecd;
-  text-decoration: underline;
-}
-
-.obs-tab-right::before {
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: auto;
-  border-left: 1px solid #e5e5e5;
-  border-bottom: none;
-}
-
-.uk-accordion-title::after {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2230%22%20height%3D%2230%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20ratio%3D%221%22%3E%20%3Cpolyline%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.03%22%20points%3D%2216%207%2010%2013%204%207%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
-}
-
-.uk-open > .uk-accordion-title::after {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2230%22%20height%3D%2230%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20ratio%3D%221%22%3E%20%3Cpolyline%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.03%22%20points%3D%224%2013%2010%207%2016%2013%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
-}
-
-@media (max-width: 640px) {
-  .obs-tab-right {
-    flex-direction: column;
-    margin-left: 0;
+  .railbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: 13px;
   }
 
-  .obs-tab-right > * {
-    padding-left: 0;
-  }
-
-  .obs-tab-right > * > a {
-    text-align: left;
-    border-left: 1px solid transparent;
-    border-bottom: none;
-  }
-
-  .uk-tab > * > a {
-    text-transform: none;
-    font-size: 1rem;
-  }
+  .railbar b { font-family: var(--font-heading); font-weight: 400; font-size: 20px; }
 }
 </style>

@@ -4,25 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="online booking site" />
-    <meta name="theme-color" content="#f2f2f3" />
+    <meta name="theme-color" content="#f5ead8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
-      UIkit drives the wizard (uk-tab / uk-switcher), the offcanvas, the modals
-      and the icons, and the components call the `UIkit` global imperatively —
-      see src/composables/wizard.js.
+      UIkit used to be loaded here as vendored UMD script tags: it drove the
+      wizard's tab strip and switcher, the offcanvas, the modals and the icons,
+      and the components reached for the `UIkit` global imperatively.
 
-      These are served from this site, not from a CDN. jsdelivr used to host
-      them, which put the booking flow behind a third party being reachable.
-      The files are copied out of node_modules by tools/vendor-uikit.mjs on
-      predev/prebuild, so npm still owns the version.
+      The Organic redesign replaced the wizard with one scrolling page, which
+      left nothing calling into it. The dependency, the vendoring script and
+      src/composables/wizard.js all went with it — the design is, in its own
+      words, plain CSS on plain HTML.
 
-      Classic script tags rather than an ES import on purpose: imported through
-      Vite, UIkit's automatic boot does not run, so `uk-icon` renders nothing
-      and the switcher never activates. The UMD is what this markup expects.
+      The theme colour above is Organic's --color-bg.
     -->
-    <link rel="stylesheet" href="/vendor/uikit/uikit.min.css" />
-    <script src="/vendor/uikit/uikit.min.js"></script>
-    <script src="/vendor/uikit/uikit-icons.min.js"></script>
     <title>Vegetable - online booking</title>
   </head>
   <body>
