@@ -1,45 +1,51 @@
-import moment from 'moment'
+import moment from 'moment-timezone'
+import { useOwnerStore } from '@/stores/owner'
 
 /**
- * Renders a slot returned by `publicowner/slots` or `publicowner/monthslots`.
+ * Renders a slot returned by `publicowner/slots` or `publicowner/monthslots`
+ * in the salon's own clock.
  *
- * These strings look like instants and are not. Vegetable.API stores the
- * schedule as wall-clock intervals — `SchedulesOnDays.WorkStartTime` is
- * `09:00:00`, with no zone — and serialises them with a `Z` suffix, so a salon
- * that opens at nine emits `2026-08-10T09:00:00Z`. Verified against the
- * database: the stored interval and the emitted hour are the same number.
+ * These are real UTC instants and must be converted, not read literally. A
+ * Moscow salon opening at 09:00 comes back as `2026-08-10T06:00:00Z`, and the
+ * booking page has to say 09:00 — to the customer *and* to the barber, wherever
+ * either of them happens to be sitting. So the owner's `timeZone` decides, not
+ * the browser's.
  *
- * That makes the `Z` a lie, and it matters because the obvious reading of it is
- * wrong in both directions:
+ * ## The mistake this file used to make
  *
- *  - `moment(value).format('HH:mm')` converts to the *viewer's* zone. That is
- *    what this app shipped with, and on a UTC+3 machine it displayed the salon's
- *    09:00 opening as 12:00. The customer and the barber would have been
- *    reading different times for the same booking.
- *  - Converting to the owner's zone instead — the owner record does carry
- *    `timeZone` — adds the offset a second time and is worse.
+ * It formatted the wall clock of the string as-sent, deliberately, on the
+ * strength of an API that returned `09:00:00Z` for a 09:00 opening — from which
+ * the obvious conclusion was that the `Z` was a lie and the digits should be
+ * shown untouched.
  *
- * The right answer while the API behaves this way is to show the wall clock
- * exactly as sent, which is what the original vegetable.web did by rendering
- * the raw value. `parseZone` keeps whatever offset is in the string instead of
- * shifting to local, so the digits survive.
+ * The `Z` was not a lie. The API was buggy: PublicController built its working
+ * hours with `ToUniversalTime()` on a `DateTimeKind.Unspecified` value, which
+ * reads it in the *server's* zone. The verification server was a UTC container,
+ * so 09:00 stayed 09:00 and looked like a wall clock. On the Windows host, whose
+ * zone matches the owner's, the same request returned the correct 06:00Z all
+ * along. Two servers, one database, different answers — which is what gave it
+ * away.
  *
- * **If Vegetable.API is ever corrected to emit real instants**, this is the
- * place that has to change with it: it would then need to convert into the
- * owner's `timeZone` rather than preserve the offset, and it would need
- * moment-timezone, which obs does not currently depend on.
+ * With the API now converting through `owner.TimeZone`, these are proper
+ * instants everywhere, and converting into the owner's zone is right.
  */
+
+/** Falls back to the browser's zone only if the owner has none recorded. */
+function ownerZone() {
+  return useOwnerStore().owner?.timeZone || moment.tz.guess()
+}
+
 export function slotTime(value) {
   if (!value) return ''
-  return moment.parseZone(value).format('HH:mm')
+  return moment(value).tz(ownerZone()).format('HH:mm')
 }
 
 /**
- * The calendar date a slot belongs to, by the same wall-clock reading. Used
- * where a slot has to be matched against a day rather than displayed — near
- * midnight, converting to local first can land it on the wrong date.
+ * The calendar date a slot falls on, in the salon's zone. Matters near
+ * midnight: an instant can belong to a different date for the customer than it
+ * does for the salon, and the salon's is the one that means anything.
  */
 export function slotDay(value) {
   if (!value) return ''
-  return moment.parseZone(value).format('YYYY-MM-DD')
+  return moment(value).tz(ownerZone()).format('YYYY-MM-DD')
 }
