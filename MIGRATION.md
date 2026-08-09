@@ -1105,6 +1105,46 @@ only rewrites `assets/public` and the generated config, both gitignored.
 
 iOS is not set up — `npx cap add ios` needs macOS and CocoaPods.
 
+### The toolchain
+
+No Android Studio. The Gradle wrapper is committed, so Gradle downloads itself;
+what has to exist beforehand is:
+
+| | |
+|---|---|
+| JDK 17 | `C:\Program Files\Microsoft\jdk-17.0.20.8-hotspot`, `JAVA_HOME` set |
+| Android command-line tools | `C:\Android\sdk\cmdline-tools\latest`, `ANDROID_HOME=C:\Android\sdk` |
+| SDK packages | `platform-tools`, `platforms;android-34`, `build-tools;34.0.0` |
+
+`android-34` because Capacitor 6 builds against compileSdk 34; JDK 17 because
+AGP 8.2.1 requires it. The command-line tools come from `dl.google.com` — winget's
+`Google.AndroidCLI` is Google's newer agent-oriented CLI, not the classic
+`cmdline-tools` that ships `sdkmanager`, and Gradle's SDK detection wants the
+classic layout. Verify the download against the size and SHA-1 in Google's own
+`repository2-3.xml` rather than trusting the transfer.
+
+The SDK packages will not install until the Android SDK licences are accepted:
+
+```
+C:\Android\sdk\cmdline-tools\latest\bin\sdkmanager.bat --sdk_root=C:\Android\sdk --licenses
+```
+
+`sdkmanager` prints a deprecation notice pointing at the newer `android` binary.
+Gradle still expects this layout; ignore it.
+
+### What a debug build proves
+
+`app-debug.apk`, 6.1 MB — `com.vegetable.mob`, versionCode 100, versionName
+1.0.0, compileSdk 34, labelled "Busy Carrot". Inside it: 130 entries under
+`assets/public`, the four declared permissions plus the FCM ones merged in from
+the push plugin (`c2dm.permission.RECEIVE`, `WAKE_LOCK`), and the debug-only
+`networkSecurityConfig` resolved.
+
+It does **not** prove the push path. Capacitor's Gradle template skips the
+google-services plugin when `google-services.json` is absent, so the APK builds
+happily without Firebase and simply never registers. That still needs the
+project.
+
 ## Three implementations per native call
 
 `src/plugins/native.js` had two branches; it now has three, picked in order:
@@ -1326,4 +1366,6 @@ on unregistered. Until (3) exists, leave `PushProvider` on `"GeTui"`.
   both packaging routes. A packaged app that starts offline falls back to
   system type. Vendoring the woff2 files would fix it for both.
 - iOS: `npx cap add ios` on a Mac, then the same checks.
-- A device run. Nothing here has been on hardware.
+- A device run. The debug APK builds, but nothing has been installed on
+  hardware — the nvue-to-vue flex conversion still needs that pass, and so does
+  every native call in plugins/native.js.
