@@ -1,0 +1,7 @@
+# The Gradle wrapper script is run by /bin/sh on macOS and Linux. Checked out
+# with CRLF it fails with "bad interpreter", which is how a Windows-only repo
+# breaks the first time someone builds the iOS side or wires up CI.
+apps/mobile/android/gradlew text eol=lf
+
+# Binary; never touch it.
+apps/mobile/android/gradle/wrapper/gradle-wrapper.jar binary

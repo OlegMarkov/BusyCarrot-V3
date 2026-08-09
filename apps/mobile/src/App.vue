@@ -5,6 +5,7 @@ import { updateTabBarText, setLocale, getLocale } from '@/plugins/i18n'
 import { initLocalStorage } from '@/plugins/local-storage'
 import { loadIndustryFonts } from '@/plugins/fonts'
 import {
+  initNative,
   registerPushHandlers,
   createLocalNotification,
   installExitToast,
@@ -29,6 +30,11 @@ import {
 export default {
   onLaunch() {
     const log = useLogStore()
+
+    // Capacitor only: primes the values the app reads synchronously (app
+    // version, launch URL), styles the status bar and drops the splash. A
+    // no-op on app-plus and in the browser, so it is not conditional here.
+    initNative()
 
     registerPushHandlers({
       onClick: (payload) => {

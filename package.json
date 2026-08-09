@@ -15,6 +15,8 @@
     "build:admin": "npm run build --workspace apps/admin",
     "build:obs": "npm run build --workspace apps/obs",
     "build:mobile": "npm run build:app --workspace apps/mobile",
+    "cap:sync": "node tools/capacitor-sync.mjs",
+    "cap:android": "npm run cap:open:android --workspace apps/mobile",
     "build": "npm run build:admin && npm run build:obs && npm run build:mobile"
   }
 }

@@ -1039,3 +1039,206 @@ wants Postgres on 5432 with a seeded `vegetable` database, and its
 `launchSettings.json` only carries IIS profiles. That is the honest test of the
 API contract; the stub is the one that starts in a second.
 
+# Packaging with Capacitor
+
+The app used to be wrapped by HBuilderX: `uni build -p app` emits a resource
+bundle, and HBuilderX or DCloud's cloud build turns that into an APK or IPA.
+That is a GUI on one machine, which is not somewhere a release should live.
+
+## Why not DCloud's offline SDK
+
+The documented way off HBuilderX is DCloud's Android offline SDK — a Gradle
+project you drop the bundle into. Our uni-app version, `3.0.0-5010520260709002`,
+is HBuilderX 5.1.5 of 2026-07-09, and DCloud publishes `Android-SDK@5.15.2026070915`,
+an exact match, so no version bump would have been needed.
+
+It is only distributed through Baidu Cloud and Hexacloud, both of which want an
+account, an extraction code and a captcha. There is no direct download and no
+way to script one. A third-party GitHub mirror exists; a native SDK compiled
+into a shipped app is not something to take from an unofficial mirror.
+
+`tools/android-offline-package.mjs` was written and tested against a mock SDK
+layout before that route was abandoned, and then deleted. It is in the session
+history if the decision is ever revisited.
+
+## What ships now
+
+**The H5 bundle, not app-plus.** Capacitor wraps a web build, so `uni build`
+(no `-p app`) produces the shipped artifact and a native shell serves it from
+`https://localhost` inside a WebView.
+
+That is a bigger change than it sounds, because the H5 target had always been
+the *dev* target. Anything guarded by `#ifndef APP-PLUS` used to be a
+convenience so a browser would not crash; all of it is now production code. Two
+things had quietly rotted in there — see "What the switch exposed" below.
+
+The app-plus path is untouched and still builds. Nothing about this is a
+one-way door.
+
+## The build
+
+```
+npm run cap:sync                                   # Local
+node tools/capacitor-sync.mjs --env Production
+```
+
+`tools/capacitor-sync.mjs` does three things: builds the H5 bundle with
+`VITE_APP_ENV` set, copies `versionName`/`versionCode` out of
+`src/manifest.json` into `android/app/build.gradle` so the two packaging routes
+cannot drift, then runs `cap sync`.
+
+Which API host a build talks to is decided **at build time** by `VITE_APP_ENV`,
+read in `src/config.js`. There is no runtime switch and no `.env` file in the
+path, so a release cannot pick up a developer's local host by accident — the
+same shape `apps/admin` uses.
+
+Then:
+
+```
+cd apps/mobile/android && ./gradlew assembleDebug
+cd apps/mobile && npx cap open android
+```
+
+`apps/mobile/android/` is committed. Capacitor treats the native project as
+source, not output: the manifest, icons and Gradle config live there. `cap sync`
+only rewrites `assets/public` and the generated config, both gitignored.
+
+iOS is not set up — `npx cap add ios` needs macOS and CocoaPods.
+
+## Three implementations per native call
+
+`src/plugins/native.js` had two branches; it now has three, picked in order:
+
+1. **app-plus** — the 5+ runtime, behind a conditional-compilation guard. Only
+   `uni build -p app` reaches it.
+2. **Capacitor** — the shipped path.
+3. **Plain browser** — `npm run dev:mobile`.
+
+Branches 2 and 3 share one compilation target, so they share a block and
+`isCapacitor` (`Capacitor.isNativePlatform()`) separates them at runtime. The
+import block for the Capacitor packages is itself conditionally compiled, so an
+app-plus build does not pull them in.
+
+| Was | Now |
+|---|---|
+| `plus.runtime.openURL` | `Browser.open` — Custom Tabs / SFSafariViewController |
+| `plus.share.sendWithSystem` | `Share.share` |
+| `plus.key.hideSoftKeybord` | `Keyboard.hide` |
+| `plus.runtime.version` | `App.getInfo()`, cached |
+| `plus.runtime.arguments` | `App.getLaunchUrl()` + `appUrlOpen`, cached |
+| `plus.contacts.getAddressBook` | `Contacts.getContacts`, reshaped |
+| `plus.messaging` SMS | `location.href = 'sms:…'` |
+| `plus.nativeUI.toast` patch | `App` `backButton` listener |
+| `plus.sqlite` | uni storage — the existing H5 fallback |
+| `plus.push` | **nothing yet** — see below |
+
+Three of those need a note.
+
+**Two values are read synchronously that Capacitor only offers
+asynchronously.** `plus.runtime.version` and `plus.runtime.arguments` are plain
+getters; `App.getInfo()` and `App.getLaunchUrl()` are promises. Rather than make
+six call sites async — one of them a computed property, `isOldVersion` — both
+are primed once by `initNative()` (called from `App.vue` `onLaunch`) into Vue
+refs. Reading a ref inside a computed keeps the dependency, so `isOldVersion`
+re-evaluates when the version lands rather than being stuck on its first read.
+
+**SMS needs no plugin.** Capacitor's `Bridge.launchIntent` hands any non-http
+scheme straight to `startActivity(ACTION_VIEW)`. It does not call
+`resolveActivity`, so Android 11 package visibility does not apply and no
+`queries` block is needed. A location assignment works where `window.open`
+does not.
+
+**Press-again-to-exit was rebuilt, not ported.** The 5+ runtime emitted a
+hardcoded Chinese toast that the original intercepted by reassigning
+`plus.nativeUI.toast`. Capacitor hands the hardware back button over whole
+instead, so `installExitToast()` now implements the two-press contract directly:
+go back if there is history, otherwise toast, and exit on a second press inside
+two seconds.
+
+`plus.sqlite` needed nothing at all. It only ever stored per-device "is this
+employee shown in the filter" flags, and the H5 fallback already backed those
+with uni storage, which is WebView `localStorage` and persists.
+
+## What the switch exposed
+
+Promoting the H5 branch from dev convenience to shipped code turned up two
+things that had been latent:
+
+**`ReservationBaseUrl` was undefined in H5.** The public URLs sat inside the
+app-plus block in `config.js`, but `pages/reservation/edit.vue:442` reads
+`ReservationBaseUrl` on every target. In a browser it evaluated to `undefined`
+and the share link came out as `undefined<id>`. Harmless while H5 was dev-only;
+shipped breakage the moment Capacitor packaged that bundle. Anything not
+genuinely per-target now lives outside both blocks.
+
+**The H5 branch only had `_Local`.** It was written for one dev host. Capacitor
+needs every environment app-plus has, so `Development` and `Production` are
+there now.
+
+## Android specifics
+
+- **`applicationId` is `com.vegetable.mob`**, taken from the iOS
+  `urlidentifier` in the old manifest. The old manifest never set an Android
+  package name, so HBuilderX supplied its own default. **If there is a live Play
+  listing, confirm its package name matches** — Play treats a different
+  `applicationId` as a different app, and this cannot be changed after the first
+  upload.
+- **`versionCode` is 100**, from `src/manifest.json`, the same number the
+  HBuilderX builds used. It must be *higher* than whatever is already on the
+  store or the upload is rejected. Bump `src/manifest.json`, not `build.gradle`.
+- **Contacts permissions are declared in `AndroidManifest.xml`.** The
+  `@capacitor-community/contacts` plugin requests them at runtime but does not
+  declare them; without the entries `requestPermissions()` is refused outright.
+- **Cleartext is allowed for debug builds only.** `Local` and `Development`
+  point at plain http, which Android has blocked by default since API 28.
+  `app/src/debug/res/xml/network_security_config.xml` allowlists those hosts and
+  lives under `src/debug`, so release builds stay https-only. Add a LAN IP there
+  to run against an API on another machine.
+- **Keystores are gitignored.** `android/.gitignore` shipped with `*.jks` and
+  `*.keystore` commented out; they are uncommented now. The release key cannot
+  be rotated — lose control of it and anyone can publish as us, lose the file
+  and the listing can never be updated.
+
+## Push is the one thing that does not carry over
+
+On app-plus the device's push id is a GeTui client id, minted by the uniPush SDK
+inside the DCloud runtime. Vegetable.API addresses exactly that: `PushService`
+wraps `GeTuiPushApiV2`, configured by `GeTuiPushOptions` in `appsettings.json`,
+and both `DailyPushNotificationsWorker` and `NotificationMessagesSendWorker`
+send through it.
+
+There is no GeTui SDK in a Capacitor app, so there is no cid to return.
+`getPushClientId()` returns null there, `registerPushHandlers()` does nothing,
+and because every caller already guards on a falsy id, the app degrades to "this
+device is not registered for push" rather than breaking. **That is not shippable
+as-is** — push is how the product tells an owner about a new booking.
+
+Two ways out, both real work:
+
+1. **Wrap the GeTui SDK in a Capacitor plugin.** GeTui publishes native Android
+   and iOS SDKs. The backend, the stored cids and the workers all stay exactly
+   as they are. Cost: writing and maintaining a native plugin, in Java/Kotlin
+   and Swift, against Chinese-language documentation.
+2. **Move to FCM/APNs** with `@capacitor/push-notifications`. Standard, well
+   documented, no custom native code. Cost: a second `IPushService` on the API —
+   the interface is already the seam, so this is an addition rather than a
+   rewrite — plus a Firebase project, and every device's stored cid becomes
+   stale, so registrations re-register on next launch and old rows need clearing.
+
+Worth noting either way: `pages/login/loginint.vue` `login()` posts
+`userData: [{ cid, platform }]` unconditionally, so with a null cid it would
+persist an empty registration row. Whichever route is taken should guard that.
+
+## Still to do
+
+- The push decision above.
+- Confirm the Play `applicationId` and get the release keystore.
+- Launcher icons and the splash image are Capacitor's placeholders.
+- Deep-link schemes are not configured. The old manifest declared `hbuilder`
+  (Android) and `vegetable` (iOS); `launchArguments()` has no readers today, so
+  nothing is broken, but anything relying on those schemes needs setting up.
+- Barlow and Barlow Condensed still load from Google Fonts over the network, on
+  both packaging routes. A packaged app that starts offline falls back to
+  system type. Vendoring the woff2 files would fix it for both.
+- iOS: `npx cap add ios` on a Mac, then the same checks.
+- A device run. Nothing here has been on hardware.
