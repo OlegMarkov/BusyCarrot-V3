@@ -6,6 +6,14 @@
           <div class="plate__kicker">{{ t('hours.generalSchedule') }}</div>
           <div class="plate__title">{{ t('hours.weekPattern') }}</div>
           <div class="plate__range">{{ range }}</div>
+          <button
+            v-if="week"
+            class="btn btn-secondary plate__edit"
+            type="button"
+            @click="editorOpen = true"
+          >
+            {{ t('common.edit') }}
+          </button>
         </div>
 
         <div v-for="row in weekRows" :key="row.day" class="row">
@@ -37,15 +45,18 @@
 
         <div v-if="!overrides.length" class="page__empty">{{ t('hours.noOverrides') }}</div>
       </div>
+
+      <week-pattern-dialog v-model="editorOpen" />
     </div>
   </app-shell>
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import moment from 'moment'
 import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/AppShell.vue'
+import WeekPatternDialog from '@/components/editors/WeekPatternDialog.vue'
 import { useScheduleStore } from '@/stores/schedule'
 import { useEmployeeStore } from '@/stores/employee'
 import { GRID_START, GRID_END, toMinutes } from '@/composables/useDayColumns'
@@ -55,6 +66,8 @@ const schedules = useScheduleStore()
 const employees = useEmployeeStore()
 
 const week = computed(() => schedules.weekSchedule)
+
+const editorOpen = ref(false)
 
 const pageSub = computed(() => {
   const open = weekRows.value.filter((row) => !row.closed).length
@@ -71,7 +84,10 @@ const range = computed(() => {
 const SPAN = GRID_END - GRID_START
 
 const weekRows = computed(() => {
-  const days = week.value?.scheduleOnDays ?? []
+  // Sorted by sequence rather than trusting the array order. Postgres returns
+  // the rows in no particular order and the API happens to sort them; if that
+  // ever stopped, the whole week would render against the wrong day labels.
+  const days = [...(week.value?.scheduleOnDays ?? [])].sort((a, b) => a.sequence - b.sequence)
   // scheduleOnDays is Monday-first (the API indexes it that way, and
   // PublicOwnerController reads it with the same (day + 6) % 7 shift), so the
   // labels have to be shifted to match rather than taking the locale ordering:
@@ -143,10 +159,32 @@ watch(
 }
 
 .plate {
+  position: relative;
   background: var(--color-accent-900);
   color: #f2f2f3;
   padding: 15px 16px;
   margin-bottom: 18px;
+}
+
+/* Sits on the dark plate, so it needs the inverted treatment rather than the
+   default secondary button's dark-on-light. */
+.plate__edit {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f2f2f3;
+  background: transparent;
+  border-color: rgb(242 242 243 / 45%);
+}
+
+.plate__edit:hover {
+  background: rgb(242 242 243 / 10%);
+  border-color: #f2f2f3;
 }
 
 .plate__kicker {

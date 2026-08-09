@@ -131,7 +131,10 @@
     "required": "Required",
     "maxLength": "Too long",
     "onlyLetters": "Letters only",
-    "format": "Invalid format"
+    "format": "Invalid format",
+    "endBeforeStart": "Must be after the opening time",
+    "breakOutsideHours": "Break must fall inside opening hours",
+    "breakEndBeforeStart": "Break end must be after its start"
   },
   "common": {
     "close": "Close",
@@ -182,7 +185,13 @@
     "closed": "Closed",
     "markedOff": "Marked as off day",
     "noOverrides": "No overrides",
-    "openDays": "Open {0} days a week"
+    "openDays": "Open {0} days a week",
+    "edit": "Edit weekly pattern",
+    "open": "Opens",
+    "close": "Closes",
+    "breakTime": "Break",
+    "dayOpen": "Open",
+    "noSchedule": "No weekly schedule yet"
   },
   "settings": {
     "account": "Account",

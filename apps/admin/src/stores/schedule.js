@@ -8,9 +8,12 @@ import { apiClient } from '@/plugins/api'
  * open/close bounds both need them.
  *
  * The shape follows apps/mobile's schedule store, which is exercised against
- * the same `owner/schedule` endpoints, but only the read side is carried: the
- * desktop design displays the weekly pattern and its overrides, it does not
- * edit them.
+ * the same `owner/schedule` endpoints.
+ *
+ * Reads came first and editing was left out, which meant the Hours page could
+ * show a week pattern nobody could change. `updateSchedule` closes that. Custom
+ * one-off overrides are still display-only here; apps/mobile is where those get
+ * created, and they carry date-range and overlap rules this page does not model.
  */
 
 /**
@@ -85,6 +88,28 @@ export const useScheduleStore = defineStore('schedule', {
       } finally {
         this.loading = false
       }
+    },
+
+    /**
+     * Replaces a schedule, days included.
+     *
+     * The payload must carry **every** day the schedule should end up with.
+     * OwnerRepo.UpdateSchedule does a RemoveRange over all SchedulesOnDays for
+     * the schedule id and then re-adds whatever the body contains, so a day
+     * omitted here is not left alone — it is deleted. Sending a partial week
+     * would silently destroy the rest of it.
+     *
+     * This is what apps/mobile does too: it posts the whole schedule object it
+     * was editing.
+     */
+    async updateSchedule(schedule) {
+      await apiClient.SchedulesService.update(schedule)
+      return this.fetchSchedules(schedule.employeeId)
+    },
+
+    async createSchedule(schedule) {
+      await apiClient.SchedulesService.create(schedule)
+      return this.fetchSchedules(schedule.employeeId)
     },
 
     reset() {
