@@ -4,6 +4,7 @@ import { apiClient } from '@/plugins/api'
 import { i18n } from '@/plugins/i18n'
 import { getCaptchaToken, isCaptchaConfigured } from '@/plugins/recaptcha'
 import { useOwnerStore } from '@/stores/owner'
+import { slotTime } from '@/plugins/slot-time'
 
 const LOCALES = ['en', 'ru']
 
@@ -75,9 +76,12 @@ export const useBookingStore = defineStore('booking', {
 
     selectedDateTime: (state) => {
       if (!state.selectedDate) return null
+      // selectedDate is a real local Date off the calendar, so it formats
+      // normally. selectedTime is a slot string from the API and does not —
+      // see plugins/slot-time.js.
       const day = moment(state.selectedDate).locale(state.locale).format('ddd, LL')
       if (!state.selectedTime) return day
-      return `${day} | ${moment(state.selectedTime).format('HH:mm')}`
+      return `${day} | ${slotTime(state.selectedTime)}`
     },
 
     isDayAvailable: (state) => (date) => state.monthSlots[dayKey(date)] === true,

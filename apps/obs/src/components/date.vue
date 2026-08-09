@@ -104,6 +104,7 @@ import moment from 'moment'
 import { mapStores } from 'pinia'
 import { useBookingStore } from '@/stores/booking'
 import { useWizard } from '@/composables/wizard'
+import { slotTime } from '@/plugins/slot-time'
 
 export default {
   name: 'ObsDate',
@@ -219,7 +220,9 @@ export default {
     },
 
     formatTime(slot) {
-      return moment(slot).format('HH:mm')
+      // Not moment(slot).format(...) — that shifts the salon's wall clock into
+      // the viewer's timezone. See plugins/slot-time.js.
+      return slotTime(slot)
     },
 
     daySelected(day) {
