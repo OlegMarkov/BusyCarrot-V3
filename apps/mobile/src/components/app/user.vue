@@ -37,7 +37,7 @@ import { useServiceStore } from '@/stores/service'
 import { useCustomerStore } from '@/stores/customer'
 import { useReservationStore } from '@/stores/reservation'
 import { useImageStore } from '@/stores/image'
-import { getPushClientId } from '@/plugins/native'
+import { whenPushClientId } from '@/plugins/native'
 
 /**
  * Ported from vegetable.mobile.vue/components/app/user.nvue.
@@ -49,7 +49,7 @@ import { getPushClientId } from '@/plugins/native'
  * Changes:
  *  - the nine `RESET_*` commits become `reset()` calls on each store, collected
  *    in `resetAllStores()`
- *  - `plus.push.getClientInfo()` → `getPushClientId()`
+ *  - `plus.push.getClientInfo()` → `whenPushClientId()`
  *  - `created()` checked `if (!this.ownerDb)`, a property that exists nowhere,
  *    so the guard was always true and `FETCH_USER` always ran. It now checks
  *    `userDb`, which is what the template actually reads.
@@ -95,7 +95,10 @@ export default {
       if (this.isDeleteAction) {
         await useOwnerStore().deleteOwner()
       } else {
-        await useUserStore().deleteUserData(getPushClientId())
+        // Awaited: logging out a second after launch, while the FCM token is
+        // still in flight, would otherwise unregister nothing and leave the
+        // device receiving pushes for an account it is no longer signed into.
+        await useUserStore().deleteUserData(await whenPushClientId())
       }
 
       this.resetAllStores()

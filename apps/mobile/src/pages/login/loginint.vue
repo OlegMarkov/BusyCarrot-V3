@@ -177,7 +177,7 @@ import Constants from '@/config'
 import { useUserStore } from '@/stores/user'
 import { useSettingsStore } from '@/stores/settings'
 import { useLogStore } from '@/stores/log'
-import { getPushClientId, openUrl, platform, isIOS } from '@/plugins/native'
+import { whenPushClientId, openUrl, platform, isIOS } from '@/plugins/native'
 
 const CODE_LIFETIME = 120
 const RESEND_AFTER = 60
@@ -339,9 +339,12 @@ export default {
       this.captcha = ''
     },
 
-    login() {
+    async login() {
       const user = useUserStore()
-      const cid = getPushClientId()
+
+      // Awaited: on Capacitor this is an FCM token that arrives after a round
+      // trip to Google, and the user can finish typing a four-digit code first.
+      const cid = await whenPushClientId()
 
       user.setTimer(0)
       useLogStore().postLog({ level: 'info', text: `push client id: ${cid}` })
@@ -353,7 +356,11 @@ export default {
         name: '',
         email: '',
         language: this.language || uni.getSystemInfoSync().language.substring(0, 2),
-        userData: [{ cid, platform: platform() }]
+        // Only claim a registration when there is actually one to claim.
+        // Posting `{ cid: null }` persisted an empty row that nothing could
+        // ever match or clean up; the dashboard registers this device on its
+        // next load anyway, once the token exists.
+        userData: cid ? [{ cid, platform: platform() }] : []
       }
 
       user

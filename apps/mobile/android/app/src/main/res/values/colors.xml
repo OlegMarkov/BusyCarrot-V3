@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The tint Android applies behind the notification silhouette. Industry's
+        steel, the same value as --color-accent in styles/industry.scss.
+    -->
+    <color name="notification_color">#5980A6</color>
+</resources>

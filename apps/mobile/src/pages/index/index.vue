@@ -81,7 +81,7 @@ import { capitalize } from '@/plugins/helpers'
 import { tArray, LANGUAGES, getLocale } from '@/plugins/i18n'
 import { publishDate, subscribeDate } from '@/plugins/date-bus'
 import { subscribeSheet } from '@/plugins/sheet-bus'
-import { getPushClientId, appVersion, isIOS } from '@/plugins/native'
+import { whenPushClientId, appVersion, isIOS } from '@/plugins/native'
 
 /**
  * Ported from vegetable.mobile.vue/pages/index/index.nvue.
@@ -184,12 +184,17 @@ export default {
 
     useUserStore()
       .fetchUser()
-      .then((result) => {
+      .then(async (result) => {
         if (!result) return
 
         // Register this device for push if it isn't already, or if a previous
         // registration never recorded which platform it came from.
-        const cid = getPushClientId()
+        //
+        // Awaited rather than read synchronously: on Capacitor the FCM token
+        // arrives after a round trip to Google, and fetchUser routinely wins
+        // that race. Reading it synchronously here left the device unregistered
+        // until some later launch happened to be slower.
+        const cid = await whenPushClientId()
         const registrations = result.userData || []
         const needsRegistration =
           cid &&

@@ -1199,41 +1199,126 @@ there now.
   be rotated — lose control of it and anyone can publish as us, lose the file
   and the listing can never be updated.
 
-## Push is the one thing that does not carry over
+## Push moved from GeTui to FCM
 
-On app-plus the device's push id is a GeTui client id, minted by the uniPush SDK
-inside the DCloud runtime. Vegetable.API addresses exactly that: `PushService`
-wraps `GeTuiPushApiV2`, configured by `GeTuiPushOptions` in `appsettings.json`,
-and both `DailyPushNotificationsWorker` and `NotificationMessagesSendWorker`
-send through it.
+On app-plus the device's push id was a GeTui client id, minted by the uniPush
+SDK inside the DCloud runtime. A Capacitor app has no GeTui SDK, so that id has
+no source. The two ways out were wrapping GeTui's native SDK in a plugin, or
+moving to FCM/APNs; **FCM was chosen**, so the id is now a Firebase registration
+token and the API grew a second sender.
 
-There is no GeTui SDK in a Capacitor app, so there is no cid to return.
-`getPushClientId()` returns null there, `registerPushHandlers()` does nothing,
-and because every caller already guards on a falsy id, the app degrades to "this
-device is not registered for push" rather than breaking. **That is not shippable
-as-is** — push is how the product tells an owner about a new booking.
+Neither side is a rewrite. The payload contract is unchanged — the API sends
+`{ title, body, url }` and the app navigates to `url` — which is what lets the
+client code stay common between the two runtimes.
 
-Two ways out, both real work:
+### The app
 
-1. **Wrap the GeTui SDK in a Capacitor plugin.** GeTui publishes native Android
-   and iOS SDKs. The backend, the stored cids and the workers all stay exactly
-   as they are. Cost: writing and maintaining a native plugin, in Java/Kotlin
-   and Swift, against Chinese-language documentation.
-2. **Move to FCM/APNs** with `@capacitor/push-notifications`. Standard, well
-   documented, no custom native code. Cost: a second `IPushService` on the API —
-   the interface is already the seam, so this is an addition rather than a
-   rewrite — plus a Firebase project, and every device's stored cid becomes
-   stale, so registrations re-register on next launch and old rows need clearing.
+`@capacitor/push-notifications`. `registerPushHandlers()` maps the two runtimes
+onto each other: both offer a "user tapped it" event and a "one arrived while
+you were in the foreground" event, carrying a free-form payload.
 
-Worth noting either way: `pages/login/loginint.vue` `login()` posts
-`userData: [{ cid, platform }]` unconditionally, so with a null cid it would
-persist an empty registration row. Whichever route is taken should guard that.
+| GeTui / 5+ | FCM / Capacitor |
+|---|---|
+| `plus.push.addEventListener('click')` | `pushNotificationActionPerformed` |
+| `plus.push.addEventListener('receive')` | `pushNotificationReceived` |
+| `plus.push.getClientInfo().clientid` | `registration` event token |
+
+**The token is asynchronous, and that is the part with teeth.** A GeTui cid was
+available synchronously the moment the runtime booted. An FCM token needs a
+permission prompt and a round trip to Google. Both places that record the device
+— the login screen and the dashboard's `fetchUser` — routinely run first, so
+reading it synchronously posted a null and left the device unregistered until
+some later launch happened to lose the race.
+
+`whenPushClientId()` is the fix: it resolves the cached token if there is one,
+waits for the `registration` event if one is in flight, and resolves **null**
+rather than rejecting when there is genuinely no token — permission refused,
+registration failed, or the 8s timeout elapsed. All three mean the same thing to
+a caller, and every caller already treated a falsy id as "not registered".
+
+Three call sites take the awaited form. The third is not obvious:
+`components/app/user.vue` unregisters the device on logout, and logging out a
+second after launch would otherwise unregister nothing and leave the phone
+receiving pushes for an account it is no longer signed into.
+
+`loginint.vue` also stopped posting `userData: [{ cid: null }]` unconditionally.
+That persisted an empty registration row nothing could match or clean up; it now
+posts an empty array and lets the dashboard register the device once a token
+exists.
+
+The iOS foreground re-raise is gone. GeTui delivered transparent messages that
+iOS would not display by itself, so `App.vue` re-raised them as local
+notifications. The API now sends a real APNs alert and `presentationOptions` in
+`capacitor.config.json` tells iOS to show it, so `createLocalNotification()` is
+deliberately a no-op on Capacitor. It stays for the app-plus path.
+
+### The API
+
+`Vegetable.Core/Services/FcmPushService.cs`, on `FirebaseAdmin`. It implements
+the existing `IPushService`, so `NotificationMessagesSendWorker` — the only live
+sender — did not change.
+
+**Both providers stay registered.** `services.UsePushApi()` picks one from the
+`PushProvider` setting in appsettings.json; it is `"GeTui"` today. This is not
+fussiness: during the rollout the two populations are disjoint. A phone running
+an HBuilderX build has a GeTui cid that only GeTui can reach, and a phone
+running the Capacitor build has an FCM token that only Firebase can. Flipping
+the setting decides which population gets notified, so it should not flip until
+the Capacitor build is the one people are running — and the old rows want
+clearing afterwards.
+
+Two deliberate differences from the GeTui implementation:
+
+- **Both platform blocks are always sent** and the `platform` argument is
+  ignored. FCM applies whichever suits the token, which beats trusting the
+  platform string stored beside the registration — those rows have been wrong
+  before, which is why the app re-registers when it finds a null one.
+- **No badge increment.** GeTui had `auto_badge: "+1"`; FCM has no
+  auto-increment and wants an absolute number, which the sender cannot know.
+  `clearBadge()` clears the tray on Capacitor but does not reset the iOS badge
+  count — the push plugin has no badge API. Both need a plugin and a counter if
+  the badge matters.
+
+A dead token (app uninstalled, token rotated) comes back as
+`MessagingErrorCode.Unregistered`. That is caught and returned as a string
+rather than thrown, so one stale row cannot fail a batch; the reason lands in
+`NotificationMessage.Result`.
+
+`PushMessageToApp()` — GeTui's broadcast — throws `NotSupportedException`. It
+has no live caller, and FCM has no equivalent that does not need devices
+subscribed to a topic first. Shipping an untested broadcast would be worse than
+saying so.
+
+`FirebaseAdmin` needs `Newtonsoft.Json` ≥ 13.0.4; the solution pinned 13.0.1, so
+all three projects that reference it were bumped. Same 13.0.x line.
+
+### What Firebase needs from you
+
+Four things, none of which can come from the repo:
+
+1. **A Firebase project**, with an Android app registered under the package name
+   `com.vegetable.mob` (confirm this against the Play listing first — see above).
+2. **`google-services.json`** from that project, dropped at
+   `apps/mobile/android/app/`. Capacitor's Gradle template already applies the
+   google-services plugin when it finds the file and skips it when it does not,
+   so nothing else changes. This file is not a secret — it ships inside the APK.
+3. **A service account key** with the Firebase Messaging role, for the API. Set
+   `FcmPushOptions:ServiceAccountJsonPath` to wherever it lands. **This one is a
+   real credential** — it can send push as us — and it is gitignored.
+4. **APNs**: for iOS, the auth key uploaded into the Firebase project, plus
+   `GoogleService-Info.plist` in the Xcode project. Not startable from Windows.
+
+Until (1) and (2) exist, `registrationError` fires, the app logs it and carries
+on unregistered. Until (3) exists, leave `PushProvider` on `"GeTui"`.
 
 ## Still to do
 
-- The push decision above.
+- The four Firebase artefacts above, then flip `PushProvider` to `"Fcm"` once
+  the Capacitor build is the one people are running.
 - Confirm the Play `applicationId` and get the release keystore.
-- Launcher icons and the splash image are Capacitor's placeholders.
+- Launcher icons and the splash image are Capacitor's placeholders, as is the
+  notification silhouette in `res/drawable/ic_stat_notify.xml`.
+- The iOS badge count is not maintained; see the push section.
 - Deep-link schemes are not configured. The old manifest declared `hbuilder`
   (Android) and `vegetable` (iOS); `launchArguments()` has no readers today, so
   nothing is broken, but anything relying on those schemes needs setting up.

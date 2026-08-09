@@ -24,6 +24,19 @@
 
         </activity>
 
+        <!--
+            Without these, Firebase falls back to the launcher icon, which
+            Android renders as a silhouette — a full-colour icon comes out as a
+            featureless white square. ic_stat_notify is a flat white shape for
+            exactly that reason; do not replace it with a coloured one.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notify" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -48,4 +61,11 @@
     -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+
+    <!--
+        Android 13+ gates notifications behind a runtime prompt. Without this
+        declared, PushNotifications.requestPermissions() returns denied without
+        ever showing the dialog, so the device never registers with FCM.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

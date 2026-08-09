@@ -29,6 +29,7 @@ import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Keyboard } from '@capacitor/keyboard'
+import { PushNotifications } from '@capacitor/push-notifications'
 import { Share } from '@capacitor/share'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -66,6 +67,16 @@ export const isApp = (() => {
 const cachedVersion = ref(null)
 const cachedPushId = ref(null)
 const launchUrl = ref('')
+
+/**
+ * Resolved once the FCM registration token arrives. Registration is a round
+ * trip to Google, so at the moment the login screen wants to post the device's
+ * id there may not be one yet — see whenPushClientId().
+ */
+let announcePushId
+const pushIdArrived = new Promise((resolve) => {
+  announcePushId = resolve
+})
 
 /**
  * Called once from App.vue onLaunch. Safe to call on any platform — on
@@ -196,7 +207,11 @@ function parsePayload(msg) {
  * Ported from App.vue onLaunch. `onClick` and `onReceive` get the parsed
  * payload; the caller decides what to navigate to.
  *
- * UNIMPLEMENTED ON CAPACITOR — see the note on getPushClientId().
+ * On Capacitor this is FCM/APNs. The two runtimes agree on more than they
+ * disagree: both hand over a "user tapped it" event and a "one arrived while
+ * you were in the foreground" event, and both carry a free-form payload. The
+ * payload is the contract that matters — Vegetable.API sends `{ title, body,
+ * url }` either way, and `url` is what the handlers navigate to.
  */
 export function registerPushHandlers({ onClick, onReceive } = {}) {
   // #ifdef APP-PLUS
@@ -211,12 +226,73 @@ export function registerPushHandlers({ onClick, onReceive } = {}) {
     },
     false
   )
+  return
+  // #endif
+
+  // eslint-disable-next-line no-unreachable
+  if (!isCapacitor) return
+
+  PushNotifications.addListener('registration', (token) => {
+    cachedPushId.value = token.value
+    announcePushId(token.value)
+  })
+
+  PushNotifications.addListener('registrationError', (error) => {
+    // Most often a missing or mismatched google-services.json. The app still
+    // works; it just never receives a push, so this must not be silent.
+    console.error('[native] push registration failed', error)
+    announcePushId(null)
+  })
+
+  // Foreground arrival. FCM data values are always strings, so `data` is
+  // already the flat object parsePayload() would have produced.
+  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    onReceive?.(notification.data || {}, notification)
+  })
+
+  PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    onClick?.(action.notification?.data || {}, action.notification)
+  })
+
+  requestPushPermission()
+}
+
+/**
+ * Android 13+ and iOS both gate notifications behind a runtime prompt.
+ * `register()` is what actually asks FCM for a token, so it must not run until
+ * permission is granted or there will never be a `registration` event.
+ */
+async function requestPushPermission() {
+  // #ifndef APP-PLUS
+  try {
+    let status = await PushNotifications.checkPermissions()
+    if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {
+      status = await PushNotifications.requestPermissions()
+    }
+
+    if (status.receive !== 'granted') {
+      // The user said no. Nothing is broken; this device just will not be
+      // registered, and every caller already guards on a falsy id.
+      announcePushId(null)
+      return
+    }
+
+    await PushNotifications.register()
+  } catch (error) {
+    console.error('[native] could not register for push', error)
+    announcePushId(null)
+  }
   // #endif
 }
 
 /**
- * iOS re-raises a local notification for pushes that arrive while the app is in
- * the foreground; Android navigates straight there. Kept exactly as App.vue had it.
+ * On app-plus, GeTui delivered foreground pushes as transparent messages that
+ * iOS would not display by itself, so App.vue re-raised them locally.
+ *
+ * Not needed on Capacitor: the API sends a real APNs alert and
+ * `presentationOptions` in capacitor.config.json tells iOS to show it even in
+ * the foreground. The function stays so App.vue works on both runtimes; on
+ * Capacitor it is deliberately a no-op.
  */
 export function createLocalNotification({ title, body, url }) {
   // #ifdef APP-PLUS
@@ -225,20 +301,13 @@ export function createLocalNotification({ title, body, url }) {
 }
 
 /**
- * The device's push registration id.
+ * The device's push registration id, synchronously.
  *
- * On app-plus this is a GeTui client id, minted by the uniPush SDK inside the
- * DCloud runtime, and it is what Vegetable.API's PushService addresses — see
- * GeTuiPushOptions in appsettings.json and Vegetable.Core/Services/PushService.cs.
- *
- * There is no GeTui SDK in a Capacitor app, so there is no cid to return and
- * this stays null. Push is the one capability that does not carry across from
- * the DCloud runtime for free; both routes out are native work plus, for one of
- * them, a second IPushService on the API. Documented in MIGRATION.md — it needs
- * a decision before the Capacitor build can ship.
- *
- * Callers already guard on a falsy id, so a null here degrades to "this device
- * is not registered for push" rather than breaking anything.
+ * On app-plus this is a GeTui client id and it is available immediately. On
+ * Capacitor it is an FCM registration token, which arrives asynchronously after
+ * `register()` — so this returns null until it does. **Prefer
+ * whenPushClientId()** anywhere the answer actually matters; this exists for
+ * call sites that only want a best-effort value.
  */
 export function getPushClientId() {
   // #ifdef APP-PLUS
@@ -248,10 +317,46 @@ export function getPushClientId() {
   return cachedPushId.value
 }
 
+/**
+ * The device's push registration id, waited for.
+ *
+ * Registering with FCM is a round trip to Google that takes a moment, and both
+ * places that record this device — the login screen and the dashboard's
+ * `fetchUser` — can run before it lands. Reading the id synchronously there
+ * would post a null and leave the device unregistered until some later launch
+ * happened to win the race.
+ *
+ * Resolves null rather than rejecting when there is no id to be had: permission
+ * refused, registration failed, or the timeout elapsed. Callers already treat a
+ * falsy id as "not registered", which is the truth in all three cases.
+ */
+export function whenPushClientId(timeoutMs = 8000) {
+  // #ifdef APP-PLUS
+  return Promise.resolve(getPushClientId())
+  // #endif
+
+  // eslint-disable-next-line no-unreachable
+  if (cachedPushId.value) return Promise.resolve(cachedPushId.value)
+  if (!isCapacitor) return Promise.resolve(null)
+
+  return Promise.race([
+    pushIdArrived,
+    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))
+  ])
+}
+
 export function clearBadge() {
   // #ifdef APP-PLUS
   plus.runtime.setBadgeNumber(0)
+  return
   // #endif
+
+  // eslint-disable-next-line no-unreachable
+  if (!isCapacitor) return
+
+  // Clears the tray. Note this does *not* reset the iOS badge count — the push
+  // plugin has no badge API, so that needs a separate plugin if it matters.
+  PushNotifications.removeAllDeliveredNotifications().catch(() => {})
 }
 
 /* -------------------------------------------------------------------------
