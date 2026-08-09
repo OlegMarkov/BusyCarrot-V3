@@ -258,12 +258,38 @@ export function registerPushHandlers({ onClick, onReceive } = {}) {
 }
 
 /**
+ * Whether Firebase is configured for this build. Set by tools/capacitor-sync.mjs
+ * from the presence of android/app/google-services.json.
+ *
+ * Guarding on it is load-bearing, not defensive: `PushNotifications.register()`
+ * with no Firebase config throws IllegalStateException on Capacitor's plugin
+ * thread, which is a native crash. It cannot be caught here — the try/catch
+ * below runs in JavaScript, and the throw never crosses the bridge. Without this
+ * check the app dies the instant the user taps Allow on the notification prompt.
+ */
+const pushConfigured = (() => {
+  // #ifdef APP-PLUS
+  return true
+  // #endif
+  // eslint-disable-next-line no-unreachable
+  return import.meta.env.VITE_PUSH_ENABLED === 'true'
+})()
+
+/**
  * Android 13+ and iOS both gate notifications behind a runtime prompt.
  * `register()` is what actually asks FCM for a token, so it must not run until
  * permission is granted or there will never be a `registration` event.
  */
 async function requestPushPermission() {
   // #ifndef APP-PLUS
+  if (!pushConfigured) {
+    // Don't prompt either: asking for notification permission in a build that
+    // cannot receive one is a question with no useful answer.
+    console.warn('[native] push is not configured for this build; skipping registration')
+    announcePushId(null)
+    return
+  }
+
   try {
     let status = await PushNotifications.checkPermissions()
     if (status.receive === 'prompt' || status.receive === 'prompt-with-rationale') {

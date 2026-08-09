@@ -1239,11 +1239,22 @@ there now.
 - **Contacts permissions are declared in `AndroidManifest.xml`.** The
   `@capacitor-community/contacts` plugin requests them at runtime but does not
   declare them; without the entries `requestPermissions()` is refused outright.
-- **Cleartext is allowed for debug builds only.** `Local` and `Development`
-  point at plain http, which Android has blocked by default since API 28.
-  `app/src/debug/res/xml/network_security_config.xml` allowlists those hosts and
-  lives under `src/debug`, so release builds stay https-only. Add a LAN IP there
-  to run against an API on another machine.
+- **Reaching an http API takes two separate exemptions, not one.** `Local` and
+  `Development` point at plain http, and both of these block it:
+  1. Android has refused cleartext by default since API 28.
+     `app/src/debug/res/xml/network_security_config.xml` allowlists those hosts
+     and lives under `src/debug`, so release builds stay https-only. Add a LAN
+     IP there to run against an API on another machine.
+  2. `androidScheme: https` means the WebView serves the bundle from
+     `https://localhost`, and a **secure origin may not issue plain-http XHR** —
+     the request is blocked as mixed content before Android's policy is even
+     consulted. `tools/capacitor-sync.mjs` sets `allowMixedContent` on the
+     generated `assets/capacitor.config.json` for non-Production builds only,
+     leaving the tracked config with the production answer.
+
+  The second one is easy to miss because the first looks sufficient. Symptom is
+  a console line reading `Mixed Content: ... has been blocked`, with the request
+  never reaching the server — so the API log shows nothing at all.
 - **Keystores are gitignored.** `android/.gitignore` shipped with `*.jks` and
   `*.keystore` commented out; they are uncommented now. The release key cannot
   be rotated — lose control of it and anyone can publish as us, lose the file
@@ -1358,8 +1369,28 @@ Four things, none of which can come from the repo:
 4. **APNs**: for iOS, the auth key uploaded into the Firebase project, plus
    `GoogleService-Info.plist` in the Xcode project. Not startable from Windows.
 
-Until (1) and (2) exist, `registrationError` fires, the app logs it and carries
-on unregistered. Until (3) exists, leave `PushProvider` on `"GeTui"`.
+Until (3) exists, leave `PushProvider` on `"GeTui"`.
+
+### Without google-services.json, registration must not be attempted at all
+
+An earlier version of this document said the app would fire `registrationError`
+and carry on unregistered. That was wrong, and a device proved it.
+
+`PushNotifications.register()` with no Firebase config throws
+`IllegalStateException: Default FirebaseApp is not initialized` on Capacitor's
+own plugin thread. It is a native crash, not a rejected promise: the JavaScript
+try/catch around the call never sees it, and neither does the
+`registrationError` listener. The app died the instant the notification
+permission was granted — `FATAL EXCEPTION: CapacitorPlugins`.
+
+So registration is guarded on `VITE_PUSH_ENABLED`, which
+`tools/capacitor-sync.mjs` sets from the presence of
+`android/app/google-services.json`. Without the file the app skips both the
+permission prompt and `register()`, and says so in the log. Adding the file is
+all it takes to turn push back on.
+
+Worth generalising: a Capacitor plugin throwing on its own thread cannot be
+contained from JavaScript. Guard the call, do not wrap it.
 
 ## Still to do
 

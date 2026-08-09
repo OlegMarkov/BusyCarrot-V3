@@ -58,8 +58,25 @@ function run(command, options = {}) {
 
 /* ── 1. the web bundle ─────────────────────────────────────────────────── */
 
-console.log(`\n>> building the H5 bundle for ${environment}\n`)
-run('npm run build:h5', { env: { VITE_APP_ENV: environment } })
+// Whether Firebase is actually configured for the Android app, decided here and
+// baked into the bundle as VITE_PUSH_ENABLED.
+//
+// This is not a nicety. Calling PushNotifications.register() without a
+// google-services.json throws IllegalStateException ("Default FirebaseApp is not
+// initialized") on Capacitor's own plugin thread — a native crash, not a
+// rejected promise, so no JavaScript try/catch or registrationError listener can
+// contain it. The app dies the moment the user grants notification permission.
+// Found by running a debug build on a device; the browser cannot reproduce it
+// and the build succeeds either way.
+const firebaseConfig = path.join(mobile, 'android', 'app', 'google-services.json')
+const pushEnabled = fs.existsSync(firebaseConfig)
+
+console.log(`\n>> building the H5 bundle for ${environment}`)
+console.log(`>> push: ${pushEnabled ? 'enabled (google-services.json found)' : 'disabled (no google-services.json)'}\n`)
+
+run('npm run build:h5', {
+  env: { VITE_APP_ENV: environment, VITE_PUSH_ENABLED: String(pushEnabled) }
+})
 
 /* ── 2. version, from the one place that declares it ───────────────────── */
 
@@ -98,6 +115,33 @@ if (fs.existsSync(gradlePath)) {
 
 console.log('\n>> cap sync\n')
 run('npx cap sync')
+
+/* ── mixed content, for the http environments only ─────────────────────── */
+
+// `androidScheme: https` means the WebView serves the bundle from
+// https://localhost, and a secure origin may not issue plain-http XHR — the
+// WebView blocks it as mixed content and logs ERR_BLOCKED, *before* Android's
+// cleartext policy is consulted. So network_security_config.xml is necessary
+// but not sufficient: Local and Development point at http hosts and cannot work
+// without this.
+//
+// Patched into the generated copy under android/app/src/main/assets rather than
+// capacitor.config.json itself, so the tracked config keeps the production
+// answer (mixed content off) and no build can turn it on by accident.
+if (environment !== 'Production') {
+  const generated = path.join(
+    mobile, 'android', 'app', 'src', 'main', 'assets', 'capacitor.config.json'
+  )
+
+  if (fs.existsSync(generated)) {
+    const config = JSON.parse(fs.readFileSync(generated, 'utf8'))
+    config.android = { ...(config.android || {}), allowMixedContent: true }
+    fs.writeFileSync(generated, JSON.stringify(config, null, 2))
+    console.log(`>> ${environment}: allowed mixed content so the http API is reachable`)
+  }
+} else {
+  console.log('>> Production: mixed content stays blocked (the API is https)')
+}
 
 console.log(`
 Done. The native projects now carry a ${environment} build.
