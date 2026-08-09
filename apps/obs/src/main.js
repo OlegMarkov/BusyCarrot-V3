@@ -1,4 +1,4 @@
-import '@/styles/organic.css'
+import '@/styles/classical.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
