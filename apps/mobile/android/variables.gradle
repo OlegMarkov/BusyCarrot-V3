@@ -13,4 +13,10 @@ ext {
     androidxJunitVersion = '1.1.5'
     androidxEspressoCoreVersion = '3.5.1'
     cordovaAndroidVersion = '10.1.1'
+
+    // Pinned rather than left to @capacitor/push-notifications' own fallback,
+    // which is whatever that plugin version happens to default to. Push is the
+    // one dependency where a silent bump changes runtime behaviour on devices
+    // we cannot see.
+    firebaseMessagingVersion = '23.3.1'
 }

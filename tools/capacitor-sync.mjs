@@ -71,6 +71,13 @@ function run(command, options = {}) {
 const firebaseConfig = path.join(mobile, 'android', 'app', 'google-services.json')
 const pushEnabled = fs.existsSync(firebaseConfig)
 
+// A google-services.json for the wrong package name builds and installs fine
+// and then never receives a push, with nothing in any log to say why. Check it
+// here, where the answer is cheap, rather than on a device.
+if (pushEnabled) {
+  run(`node "${path.join(root, 'tools', 'check-firebase.mjs')}"`, { cwd: root })
+}
+
 console.log(`\n>> building the H5 bundle for ${environment}`)
 console.log(`>> push: ${pushEnabled ? 'enabled (google-services.json found)' : 'disabled (no google-services.json)'}\n`)
 
