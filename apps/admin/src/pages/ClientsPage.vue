@@ -6,7 +6,9 @@
           <lucide-icon name="search" :size="15" />
           <input v-model="search" class="page__search-input" :placeholder="t('clients.search')" />
         </label>
-        <button class="btn btn-primary page__add">{{ t('clients.add') }}</button>
+        <button class="btn btn-primary page__add" @click="openEditor(null)">
+          {{ t('clients.add') }}
+        </button>
       </div>
 
       <table class="table">
@@ -21,7 +23,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.id">
+          <tr v-for="row in rows" :key="row.id" class="table__row" @click="openEditor(row.id)">
             <td><div class="initials">{{ row.initials }}</div></td>
             <td class="cell-name">
               {{ row.name }}
@@ -38,6 +40,8 @@
       </table>
 
       <div v-if="!rows.length" class="page__empty">{{ t('clients.none') }}</div>
+
+      <customer-edit-dialog v-model="editorOpen" :customer-id="editingId" />
     </div>
   </app-shell>
 </template>
@@ -48,6 +52,7 @@ import moment from 'moment'
 import { useI18n } from 'vue-i18n'
 import AppShell from '@/components/AppShell.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
+import CustomerEditDialog from '@/components/editors/CustomerEditDialog.vue'
 import { useCustomerStore } from '@/stores/customer'
 import { useReservationStore } from '@/stores/reservation'
 
@@ -56,6 +61,15 @@ const customers = useCustomerStore()
 const reservations = useReservationStore()
 
 const search = ref('')
+
+const editorOpen = ref(false)
+const editingId = ref(null)
+
+/** `null` opens an empty form; an id opens that client. */
+function openEditor(customerId) {
+  editingId.value = customerId
+  editorOpen.value = true
+}
 
 const all = computed(() => customers.activeCustomers ?? customers.customers ?? [])
 
@@ -126,6 +140,12 @@ const rows = computed(() => {
   min-width: 0;
   overflow: auto;
   padding: 22px 26px 30px;
+}
+
+/* The row opens the editor. industry.css already gives it a hover background;
+   this is the cursor that says the hover means something. */
+.table__row {
+  cursor: pointer;
 }
 
 .page__tools {

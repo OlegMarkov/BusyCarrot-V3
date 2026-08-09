@@ -129,7 +129,9 @@
   },
   "validation": {
     "required": "Required",
-    "maxLength": "Too long"
+    "maxLength": "Too long",
+    "onlyLetters": "Letters only",
+    "format": "Invalid format"
   },
   "common": {
     "close": "Close",
@@ -163,7 +165,14 @@
     "lastVisit": "Last",
     "nextVisit": "Next",
     "count": "{0} on file",
-    "none": "No clients yet"
+    "none": "No clients yet",
+    "new": "New client",
+    "edit": "Edit client",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "notes": "Notes",
+    "sendSms": "Send booking confirmations by SMS"
   },
   "hours": {
     "generalSchedule": "General schedule",
