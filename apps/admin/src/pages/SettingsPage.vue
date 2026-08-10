@@ -2,13 +2,19 @@
   <app-shell :page-title="t('nav.settings')" :page-sub="ownerName">
     <div class="page">
       <div class="page__main">
-        <div v-for="row in rows" :key="row.key" class="row" @click="row.go && row.go()">
+        <div
+          v-for="row in rows"
+          :key="row.key"
+          class="row"
+          :class="{ 'row--static': !row.go }"
+          @click="row.go && row.go()"
+        >
           <div class="row__main">
             <div class="row__title">{{ row.title }}</div>
             <div class="row__note">{{ row.note }}</div>
           </div>
           <span class="row__value">{{ row.value }}</span>
-          <lucide-icon name="chevron-right" :size="15" class="row__chevron" />
+          <lucide-icon v-if="row.go" name="chevron-right" :size="15" class="row__chevron" />
         </div>
 
         <!--
@@ -27,6 +33,7 @@
 
       <employees-dialog v-model="employeesOpen" />
       <owner-edit-dialog v-model="companyOpen" />
+      <notification-settings-dialog v-model="notifOpen" />
 
       <div class="blueprint sub">
         <i class="corner tl" /><i class="corner tr" /><i class="corner bl" /><i class="corner br" />
@@ -53,6 +60,8 @@ import AppShell from '@/components/AppShell.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import EmployeesDialog from '@/components/editors/EmployeesDialog.vue'
 import OwnerEditDialog from '@/components/editors/OwnerEditDialog.vue'
+import NotificationSettingsDialog from '@/components/editors/NotificationSettingsDialog.vue'
+import config from '@/config'
 import { useOwnerStore } from '@/stores/owner'
 import { useEmployeeStore } from '@/stores/employee'
 import { useSessionStore } from '@/stores/session'
@@ -74,9 +83,37 @@ function signOut() {
 }
 
 const ownerName = computed(() => owner.owner?.title ?? '')
+
+/** The owner's own listed number if any, otherwise the phone this session signed in with. */
+const accountNumber = computed(() => {
+  const owned = owner.owner?.phoneNumbers?.[0]?.number
+  if (owned) return owned
+  return session.phoneNumber ? `+${session.phoneNumber}` : ''
+})
+
 const employeesOpen = ref(false)
 const companyOpen = ref(false)
+const notifOpen = ref(false)
 
+/**
+ * The privacy policy is a server-rendered page on the API host, the same one
+ * the mobile app links to. Opened in a new tab rather than embedded.
+ */
+function openPrivacy() {
+  const base = (config.ApiBaseUrl || '').replace(/\/?$/, '/')
+  window.open(`${base}publicowner/privacypolicy`, '_blank', 'noopener')
+}
+
+/*
+ * Every row now resolves to an action, except `account`, which is deliberately
+ * static: the phone number is the login identity and the original admin never
+ * let it be edited. A row with no `go` renders without a chevron and does not
+ * respond to a click, rather than looking tappable and doing nothing.
+ *
+ * `currency` and `site` open the company dialog because that is where those
+ * fields are edited — currency is a select in it, and the alias and the publish
+ * switch are the "site" — so the rows deep-link to the one place they live.
+ */
 const rows = computed(() => [
   {
     key: 'company',
@@ -91,7 +128,7 @@ const rows = computed(() => [
     key: 'account',
     title: t('settings.account'),
     note: t('settings.accountNote'),
-    value: owner.owner?.phoneNumbers?.[0]?.number ?? ''
+    value: accountNumber.value
   },
   {
     key: 'currency',
@@ -101,19 +138,28 @@ const rows = computed(() => [
       // `currencyCode`, not `code` — the stub used the latter and this read
       // "undefined ₽" against a real API.
       ? `${owner.owner.currency.currencyCode} ${owner.owner.currency.symbol}`
-      : ''
+      : '',
+    go: () => {
+      companyOpen.value = true
+    }
   },
   {
     key: 'notifications',
     title: t('settings.notifications'),
     note: t('settings.notificationsNote'),
-    value: ''
+    value: '',
+    go: () => {
+      notifOpen.value = true
+    }
   },
   {
     key: 'site',
     title: t('settings.site'),
     note: owner.owner?.alias ? `busycarrot.com/${owner.owner.alias}` : t('settings.siteNote'),
-    value: owner.owner?.alias ? t('settings.live') : ''
+    value: owner.owner?.alias ? t('settings.live') : '',
+    go: () => {
+      companyOpen.value = true
+    }
   },
   {
     key: 'employees',
@@ -128,7 +174,8 @@ const rows = computed(() => [
     key: 'legal',
     title: t('settings.legal'),
     note: t('settings.legalNote'),
-    value: ''
+    value: '',
+    go: openPrivacy
   }
 ])
 
@@ -181,6 +228,15 @@ const subscriptionNote = computed(() => {
 
 .row:hover {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+/* A row that only shows a value — no chevron, no hover, no pointer. */
+.row--static {
+  cursor: default;
+}
+
+.row--static:hover {
+  background: transparent;
 }
 
 .row__main {

@@ -256,6 +256,9 @@
     "avatarNote": "Square, used in place of the initials",
     "removePhoto": "Remove photo",
     "choosePhoto": "Choose photo",
-    "zoom": "Zoom"
+    "zoom": "Zoom",
+    "allowNotifications": "Send appointment notifications",
+    "dailyTime": "Daily summary time",
+    "dailyTimeNote": "When your reminder of the day’s bookings is sent."
   }
 }
