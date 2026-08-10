@@ -19,7 +19,13 @@ export const useReservationStore = defineStore('reservation', {
     reservations: [],
     /** The day the loaded window is centred on, so we can tell when to refetch. */
     loadedDate: null,
-    loading: false
+    loading: false,
+    /**
+     * Booking counts per day, keyed "YYYY-MM-DD" in the owner's timezone.
+     * The month view needs every day of a month at once, but `fetch` only loads
+     * a ±3-day window, so the counts come from the aggregate endpoint instead.
+     */
+    countsByDay: {}
   }),
 
   getters: {
@@ -27,7 +33,10 @@ export const useReservationStore = defineStore('reservation', {
       state.reservations.find((reservation) => reservation.id === id),
 
     getReservationsByDate: (state) => (date) =>
-      state.reservations.filter((reservation) => reservation.date === date)
+      state.reservations.filter((reservation) => reservation.date === date),
+
+    /** 0 when a day has no bookings, so the month cells can read it directly. */
+    countOnDate: (state) => (dateKey) => state.countsByDay[dateKey] ?? 0
   },
 
   actions: {
@@ -46,6 +55,20 @@ export const useReservationStore = defineStore('reservation', {
       } finally {
         this.loading = false
       }
+    },
+
+    /**
+     * The per-day booking counts for the whole calendar, in one call.
+     *
+     * The endpoint groups by day in the owner's own timezone (its SQL casts
+     * StartTime through o."TimeZone"), so the keys line up with the day cells
+     * without any conversion here — unlike the reservation list, whose UTC
+     * timestamps setReservations has to localise.
+     */
+    async fetchCounts() {
+      const { data } = await apiClient.ReservationsService.getCountByDays()
+      this.countsByDay = data ?? {}
+      return this.countsByDay
     },
 
     /** UTC timestamps from the API become local, plus a `date` key to group by. */

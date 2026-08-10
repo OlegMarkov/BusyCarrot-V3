@@ -4,6 +4,13 @@
       <div class="seg">
         <label
           class="seg-opt"
+          :class="{ 'seg-opt--active': view === 'month' }"
+          @click="view = 'month'"
+        >
+          <span class="view-opt">{{ t('calendar.month') }}</span>
+        </label>
+        <label
+          class="seg-opt"
           :class="{ 'seg-opt--active': view === 'week' }"
           @click="view = 'week'"
         >
@@ -13,15 +20,31 @@
           <span class="view-opt">{{ t('calendar.day') }}</span>
         </label>
       </div>
-      <button class="btn btn-secondary topbar-btn" @click="goToday">{{ t('calendar.today') }}</button>
+      <div class="pager">
+        <button class="btn btn-secondary pager__btn" :aria-label="t('calendar.prev')" @click="step(-1)">
+          <lucide-icon name="chevron-left" :size="15" />
+        </button>
+        <button class="btn btn-secondary topbar-btn" @click="goToday">{{ t('calendar.today') }}</button>
+        <button class="btn btn-secondary pager__btn" :aria-label="t('calendar.next')" @click="step(1)">
+          <lucide-icon name="chevron-right" :size="15" />
+        </button>
+      </div>
     </template>
+
+    <!-- A whole month, at both form factors: click a day to open its day view. -->
+    <month-grid
+      v-if="view === 'month'"
+      :month-date="activeDay"
+      :active-key="activeKey"
+      @pick-day="openDayFromMonth"
+    />
 
     <!--
       Below the breakpoint the seven-column grid has no width to be read in, so
       the same day is drawn as a timeline under a week strip — the design's
       mobile Day screen. Both are fed by the identical `columns`.
     -->
-    <div v-if="isMobile" class="day">
+    <div v-else-if="isMobile" class="day">
       <week-strip :columns="columns" :active-key="activeKey" @pick-day="pickDay" />
       <day-plate v-bind="plateProps" />
       <day-timeline
@@ -47,10 +70,14 @@
     />
 
     <!-- The mobile sheet is dismissable; the desktop rail is not. -->
-    <div v-if="isMobile && rail !== 'summary'" class="sheet-scrim" @click="closeRail" />
+    <div v-if="!isMonth && isMobile && rail !== 'summary'" class="sheet-scrim" @click="closeRail" />
 
-    <!-- ── right rail / bottom sheet ── -->
-    <aside v-if="!isMobile || rail !== 'summary'" class="rail" :class="{ 'rail--sheet': isMobile }">
+    <!-- The rail belongs to the day and week views; the month is full-width. -->
+    <aside
+      v-if="!isMonth && (!isMobile || rail !== 'summary')"
+      class="rail"
+      :class="{ 'rail--sheet': isMobile }"
+    >
       <!-- On mobile the day header is above the timeline, not in the sheet. -->
       <day-plate v-if="!isMobile" v-bind="plateProps" />
 
@@ -212,6 +239,7 @@ import TimeGrid from '@/components/calendar/TimeGrid.vue'
 import WeekStrip from '@/components/calendar/WeekStrip.vue'
 import DayTimeline from '@/components/calendar/DayTimeline.vue'
 import DayPlate from '@/components/calendar/DayPlate.vue'
+import MonthGrid from '@/components/calendar/MonthGrid.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import { useDayColumns, fromMinutes, formatDuration } from '@/composables/useDayColumns'
 import { useBreakpoint } from '@/composables/useBreakpoint'
@@ -244,6 +272,7 @@ const saving = ref(false)
 const draft = reactive({ id: null, start: null, customerId: null, serviceIds: [] })
 
 const activeDay = computed(() => moment(activeKey.value))
+const isMonth = computed(() => view.value === 'month')
 
 /** Week runs from the locale's own first day, so it is Monday-first in ru. */
 const days = computed(() => {
@@ -261,6 +290,7 @@ const currency = computed(() => owner.owner?.currency?.symbol ?? '')
 const money = (value) => `${currency.value}${value ?? 0}`
 
 const pageSub = computed(() => {
+  if (view.value === 'month') return activeDay.value.format('MMMM YYYY')
   const first = days.value[0]
   const last = days.value[days.value.length - 1]
   if (view.value === 'day') return first.format('D MMMM YYYY')
@@ -412,8 +442,28 @@ function pickDay(key) {
   selectedId.value = null
 }
 
+/** A month cell was tapped: open that day in the day view. */
+function openDayFromMonth(key) {
+  activeKey.value = key
+  selectedId.value = null
+  rail.value = 'summary'
+  view.value = 'day'
+}
+
 function goToday() {
   activeKey.value = moment().format('YYYY-MM-DD')
+  rail.value = 'summary'
+  selectedId.value = null
+}
+
+/**
+ * Move the shown period by one of its own units — a month in month view, a week
+ * in week view, a day in day view. This is the only way to leave the current
+ * period; before it there was none, so week view could not reach another week.
+ */
+function step(delta) {
+  const unit = view.value === 'month' ? 'month' : view.value === 'day' ? 'day' : 'week'
+  activeKey.value = activeDay.value.clone().add(delta, unit).format('YYYY-MM-DD')
   rail.value = 'summary'
   selectedId.value = null
 }
@@ -568,14 +618,23 @@ function message() {
 
 /* — data — */
 
-// The shell loads the owner, customers and schedules; the calendar only owns
-// the reservation window, which moves with the shown week.
+// The shell loads the owner, customers and schedules; the calendar owns the
+// reservation window (which moves with the shown week) and the month view's
+// per-day counts. The counts are one call for the whole calendar, so they are
+// loaded once here rather than refetched as the shown month changes.
 onMounted(() => {
   reservations.fetchReservations(activeKey.value)
+  reservations.fetchCounts()
 })
 
-// Moving the shown week re-centres the loaded window.
-watch(activeKey, (key) => reservations.fetchReservations(key))
+// Moving the shown week re-centres the loaded window. The month view reads the
+// counts, which are already loaded, so it needs no per-navigation fetch — but a
+// booking created or deleted in day view should be reflected when you return to
+// the month, so refresh the counts whenever the window reloads.
+watch(activeKey, async (key) => {
+  await reservations.fetchReservations(key)
+  reservations.fetchCounts()
+})
 
 watch(
   () => employees.currentEmployeeId,
@@ -600,6 +659,21 @@ watch(
 .seg-opt {
   min-height: 36px;
   padding: 0 16px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pager__btn {
+  min-height: 36px;
+  width: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* — the rail — */

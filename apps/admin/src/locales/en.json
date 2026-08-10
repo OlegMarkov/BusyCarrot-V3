@@ -33,7 +33,9 @@
     "delete": "Delete",
     "date": "Date",
     "employee": "Employee",
-    "min": "min"
+    "min": "min",
+    "prev": "Previous",
+    "next": "Next"
   },
   "login": {
     "title": "Vegetable",
