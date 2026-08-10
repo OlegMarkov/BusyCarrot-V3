@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useOwnerStore } from '@/stores/owner'
-import { devAuthEnabled, seedDevSession } from '@/plugins/dev-auth'
+import { useSessionStore } from '@/stores/session'
 
 /**
  * The desktop design is a five-section app behind a sidebar, so each section is
@@ -22,19 +21,25 @@ export const router = createRouter({
   routes
 })
 
-// Ported from vegetable/Vegetable.Admin/middleware/auth.js. The original used
-// window.location.replace('/login'); router.push keeps SPA navigation instead.
+/*
+ * Ported from vegetable/Vegetable.Admin/middleware/auth.js. The original used
+ * window.location.replace('/login'); router.push keeps SPA navigation instead.
+ *
+ * The guard reads the session token rather than an `authenticated` flag, so
+ * "signed in" and "able to call the API" are the same condition and cannot drift
+ * apart. The dev bypass that used to sit here is gone with Auth0: sign-in now
+ * works against a local API, and `AllowTestVerificationCode` in
+ * appsettings.Local.json accepts 123456 for any number containing 123456.
+ */
 router.beforeEach((to) => {
-  const owner = useOwnerStore()
+  const session = useSessionStore()
 
-  // Dev only, and compiled out of production builds — see plugins/dev-auth.js.
-  if (devAuthEnabled) {
-    seedDevSession(owner)
-    // /login renders the Auth0 widget, which is the thing being avoided.
-    return to.name === 'login' ? { name: 'calendar' } : true
+  if (!session.isAuthenticated && to.name !== 'login') {
+    return { name: 'login' }
   }
 
-  if (!owner.authenticated && to.name !== 'login') {
-    return { name: 'login' }
+  // Nothing to do on the login page once there is a session.
+  if (session.isAuthenticated && to.name === 'login') {
+    return { name: 'calendar' }
   }
 })

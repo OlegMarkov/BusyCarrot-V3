@@ -48,27 +48,29 @@
 import { computed, ref } from 'vue'
 import moment from 'moment'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 import EmployeesDialog from '@/components/editors/EmployeesDialog.vue'
 import OwnerEditDialog from '@/components/editors/OwnerEditDialog.vue'
 import { useOwnerStore } from '@/stores/owner'
 import { useEmployeeStore } from '@/stores/employee'
-import { logout } from '@/plugins/auth'
+import { useSessionStore } from '@/stores/session'
 
 const { t } = useI18n()
+const router = useRouter()
 const owner = useOwnerStore()
 const employees = useEmployeeStore()
+const session = useSessionStore()
 
-/** Same fallbacks as the sidebar's account row. */
-const accountName = computed(
-  () => owner.user?.name || owner.user?.nickname || owner.user?.email || ''
-)
+/** Same source as the sidebar's account row. */
+const accountName = computed(() => session.displayName)
 
 function signOut() {
   // eslint-disable-next-line no-alert
   if (!window.confirm(t('nav.sign-out-confirm'))) return
-  logout()
+  session.signOut()
+  router.push({ name: 'login' })
 }
 
 const ownerName = computed(() => owner.owner?.title ?? '')

@@ -1,45 +1,46 @@
 import { createApiClient } from '@vegetable/api-client'
 import { createAxiosTransport } from '@vegetable/api-client/axios'
 import config from '@/config'
-import { refreshToken } from '@/plugins/auth'
-import { devAuthEnabled, devApiToken } from '@/plugins/dev-auth'
+import { useSessionStore } from '@/stores/session'
 
 /**
  * Ported from vegetable/Vegetable.Admin/common/api.service.js (ApiService.init()),
- * now backed by the shared @vegetable/api-client package. Every request gets a
- * fresh bearer token the same way plugins/axios.js did, via Auth0 Lock's
- * checkSession.
+ * now backed by the shared @vegetable/api-client package.
  *
- * When that fails we go back to login. The redirect uses vue-router rather than
- * `window.location.href`: a full page load throws away the Pinia state the login
- * flow is about to repopulate, and it made the app impossible to open without a
- * live Auth0 session — the dashboard's first data fetch bounced the browser
- * before anything rendered.
+ * The bearer token used to come from Auth0 Lock's `checkSession`, refreshed on
+ * every request. It is now the API's own token, minted by `users/authenticate`
+ * and held in the session store — see stores/session.js for why the Auth0 one
+ * was never going to open `[AuthorizeOwner]`.
  *
- * The router is imported lazily because `@/router` imports the owner store,
- * which imports this module; a static import would close that loop at module
- * scope.
+ * Reading the store rather than caching the token in a module variable means a
+ * sign-out takes effect on the next request with nothing to invalidate, and a
+ * token restored from storage on page load is picked up without a sync step.
+ *
+ * `stores/session` can be imported normally because it holds state only and
+ * pulls in nothing from here; `useSessionStore()` is called inside the handlers,
+ * by which time main.js has installed Pinia. The router import has to stay lazy
+ * — `@/router` imports the owner store, which imports this module, and a static
+ * import would close that loop at module scope.
  */
 export const apiClient = createApiClient({
   baseURL: config.ApiBaseUrl,
   transport: createAxiosTransport(),
-  getToken: async () => {
-    // Dev only, and compiled out of production builds — see plugins/dev-auth.js.
-    // This is the gate that matters most: Auth0's checkSession hangs rather than
-    // failing when it cannot reach a tenant, so without it no request is made
-    // at all.
-    // devApiToken lets the bypass talk to a real local API, which needs the
-    // API's own bearer token rather than an Auth0 one; null suits the stub.
-    if (devAuthEnabled) return devApiToken
 
-    try {
-      return await refreshToken()
-    } catch {
-      const { router } = await import('@/router')
-      if (router.currentRoute.value.name !== 'login') {
-        router.push({ name: 'login' })
-      }
-      return null
+  getToken: () => useSessionStore().token,
+
+  /**
+   * A 401 means the token is no longer good — rotated `Secret`, or a record the
+   * owner no longer has access to. Drop it and show the login page.
+   *
+   * The redirect goes through vue-router rather than `window.location.href`: a
+   * full page load throws away the Pinia state the login flow is about to
+   * repopulate.
+   */
+  onUnauthorized: async () => {
+    useSessionStore().signOut()
+    const { router } = await import('@/router')
+    if (router.currentRoute.value.name !== 'login') {
+      router.push({ name: 'login' })
     }
   }
 })

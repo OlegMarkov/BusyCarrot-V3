@@ -83,14 +83,14 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useOwnerStore } from '@/stores/owner'
 import { useEmployeeStore } from '@/stores/employee'
 import { useCustomerStore } from '@/stores/customer'
 import { useScheduleStore } from '@/stores/schedule'
 import { useServiceStore } from '@/stores/service'
-import { logout } from '@/plugins/auth'
+import { useSessionStore } from '@/stores/session'
 import LucideIcon from '@/components/ui/LucideIcon.vue'
 
 /**
@@ -106,8 +106,10 @@ const props = defineProps({
 })
 
 const route = useRoute()
+const router = useRouter()
 const { t, locale, availableLocales } = useI18n()
 const owner = useOwnerStore()
+const session = useSessionStore()
 const employees = useEmployeeStore()
 const customers = useCustomerStore()
 const schedules = useScheduleStore()
@@ -116,13 +118,11 @@ const services = useServiceStore()
 const ownerName = computed(() => owner.owner?.title || '')
 
 /**
- * The signed-in person, from the Auth0 profile. Falls back through the fields
- * a profile may or may not carry — `name` is optional, `email` is not always
- * present either on social connections.
+ * The signed-in person. The API's User record carries an optional name and
+ * email, so the store falls back to the phone number the session was opened
+ * with — which always exists, unlike the old Auth0 profile fields.
  */
-const accountName = computed(
-  () => owner.user?.name || owner.user?.nickname || owner.user?.email || '—'
-)
+const accountName = computed(() => session.displayName)
 
 const accountInitials = computed(() => {
   const source = accountName.value
@@ -138,13 +138,15 @@ const accountInitials = computed(() => {
 })
 
 /**
- * Auth0's logout redirects the browser away, so there is no undo once it runs
- * and no in-app state left to tidy — hence the confirm.
+ * Signing out discards the bearer token, and the API issues no refresh — getting
+ * back in means another verification call. Hence the confirm, which the Auth0
+ * version also had for the same practical reason.
  */
 function signOut() {
   // eslint-disable-next-line no-alert
   if (!window.confirm(t('nav.sign-out-confirm'))) return
-  logout()
+  session.signOut()
+  router.push({ name: 'login' })
 }
 const current = computed(() => route.name)
 const locales = computed(() => availableLocales)

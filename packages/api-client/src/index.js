@@ -137,9 +137,12 @@ export function createApiClient({ baseURL, getToken, transport, onUnauthorized }
     authenticate: (user) => post('users/authenticate', { ...user }),
     sendverificationcall: (phoneNumber, key, captcha) =>
       get('users/sendverificationcall', phoneNumber, { key, captcha }),
-    getcaptcha: (key) => get('users/getcaptcha', key),
-    // Admin-only: writes Auth0 user_metadata (Vegetable.API UsersController).
-    updateMetadata: (payload) => post('users/updatemetadata', payload)
+    getcaptcha: (key) => get('users/getcaptcha', key)
+    // `users/updatemetadata` is not wrapped. It wrote `company_id` into Auth0
+    // user metadata for admin's `?companyid=` invite link, and admin no longer
+    // uses Auth0. The endpoint has also never worked: UserRepo.UpdateMetadata
+    // interpolates the unawaited Task from GetToken() into its Authorization
+    // header, so Auth0 has rejected every call it ever made.
   }
 
   const SettingsService = {

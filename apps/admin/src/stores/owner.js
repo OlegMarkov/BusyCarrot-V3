@@ -51,10 +51,11 @@ export const useOwnerStore = defineStore('owner', {
     selectedEmployees: null,
     selectedServices: null,
     normalizedData: null,
-    denormalizedData: null,
-    authenticated: null,
-    tempCompanyId: null,
-    user: {}
+    denormalizedData: null
+    // `authenticated`, `tempCompanyId` and `user` moved out with Auth0. The
+    // token is the only thing that decides whether there is a session, and it
+    // lives in stores/session.js; `user` held an Auth0 profile, which no longer
+    // exists, and `tempCompanyId` belonged to the `?companyid=` invite flow.
   }),
   getters: {
     currentOwner: (state) => state.owner,
@@ -110,15 +111,6 @@ export const useOwnerStore = defineStore('owner', {
     },
     setDenormalizedData(denormalizedData) {
       this.denormalizedData = denormalizedData
-    },
-    setAuthenticated(authenticated) {
-      this.authenticated = authenticated
-    },
-    setTempCompanyId(companyId) {
-      this.tempCompanyId = companyId
-    },
-    setUser(user) {
-      this.user = user
     }
   },
   persist: true // replaces vuex-persistedstate (key: 'vegetable')
