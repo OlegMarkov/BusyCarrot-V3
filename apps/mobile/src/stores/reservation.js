@@ -346,12 +346,33 @@ export const useReservationStore = defineStore('reservation', {
       return data
     },
 
+    /**
+     * The join rows are reduced to bare `{ serviceId }` on the way out.
+     *
+     * OwnerRepo.UpdateReservation does a RemoveRange of the reservation's
+     * existing ReservationService rows and then `_context.Update(reservation)`
+     * in one SaveChanges. A child that arrives with its key already populated is
+     * classified Modified rather than Added, and the row it would update is the
+     * one queued for deletion, so it is dropped without an error.
+     *
+     * That is what the fetched records carry — the API sends `reservationId` on
+     * every join row — so posting them straight back lost every service the
+     * booking already had, while services added in this editing session (pushed
+     * as `{ service, serviceId }`) survived. Measured against the API: two rows
+     * with `reservationId` store one, one row with a changed `serviceId` stores
+     * none, and the same payload without it stores all of them.
+     *
+     * Vue 2 had the same shape and therefore the same bug.
+     */
     async updateReservation({ reservationId, reservation }) {
       await tracked(() =>
         apiClient.ReservationsService.update(reservationId, {
           ...reservation,
           startTime: moment.utc(reservation.startTime),
-          endTime: moment.utc(reservation.endTime)
+          endTime: moment.utc(reservation.endTime),
+          reservationServices: (reservation.reservationServices ?? []).map(({ serviceId }) => ({
+            serviceId
+          }))
         })
       )
       return this.fetchReservations()

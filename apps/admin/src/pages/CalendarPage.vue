@@ -79,10 +79,14 @@
           </button>
         </template>
 
-        <!-- new booking -->
-        <template v-else-if="rail === 'new'">
+        <!--
+          New and edit are the same form. The only differences are the heading,
+          the button label and where confirm sends the payload, so they share one
+          block rather than being kept as two that drift apart.
+        -->
+        <template v-else-if="isDraft">
           <div class="rail__head">
-            <div class="rail__title">{{ t('calendar.newReservation') }}</div>
+            <div class="rail__title">{{ draftTitle }}</div>
             <button class="rail__close" @click="closeRail">
               <lucide-icon name="close" :size="14" />
             </button>
@@ -124,6 +128,20 @@
             </div>
           </div>
 
+          <!--
+            Creating a booking picks the start by tapping a gap in the grid, but
+            editing one has no gap to tap, so the time needs to be a field. It is
+            shown in both modes because it is also the only way to correct a
+            mistyped start without deleting and starting over.
+          -->
+          <div class="rail__label">{{ t('calendar.startAt') }}</div>
+          <input
+            v-model="draftStartTime"
+            type="time"
+            step="300"
+            class="input rail__time"
+          />
+
           <div class="rail__plate rail__plate--draft">
             <div>
               <div class="rail__kicker">{{ t('calendar.startsEnds') }}</div>
@@ -138,10 +156,10 @@
 
           <button
             class="btn btn-primary btn-block rail__confirm"
-            :disabled="!draftReady"
+            :disabled="!draftReady || saving"
             @click="confirmDraft"
           >
-            {{ draftReady ? t('calendar.confirm') : t('calendar.pickClient') }}
+            {{ draftCta }}
           </button>
         </template>
 
@@ -173,6 +191,9 @@
               {{ t('calendar.message') }}
             </button>
           </div>
+          <button class="btn btn-primary btn-block rail__edit" @click="startEdit">
+            {{ t('calendar.edit') }}
+          </button>
           <button class="btn btn-secondary btn-danger btn-block rail__delete" @click="remove">
             {{ t('calendar.delete') }}
           </button>
@@ -215,7 +236,12 @@ const view = ref('week')
 const activeKey = ref(moment().format('YYYY-MM-DD'))
 const rail = ref('summary')
 const selectedId = ref(null)
-const draft = reactive({ start: null, customerId: null, serviceIds: [] })
+const saving = ref(false)
+
+// `id` is null for a new booking and the reservation's id when editing. Which
+// of the two the rail is in is `rail`, not this — but the id is what confirm
+// needs, and holding it here keeps the form's state in one object.
+const draft = reactive({ id: null, start: null, customerId: null, serviceIds: [] })
 
 const activeDay = computed(() => moment(activeKey.value))
 
@@ -323,6 +349,32 @@ const draftDuration = computed(() =>
 
 const draftReady = computed(() => Boolean(draft.customerId) && draft.serviceIds.length > 0)
 
+const isDraft = computed(() => rail.value === 'new' || rail.value === 'edit')
+
+const draftTitle = computed(() =>
+  rail.value === 'edit' ? t('calendar.editReservation') : t('calendar.newReservation')
+)
+
+const draftCta = computed(() => {
+  if (!draftReady.value) return t('calendar.pickClient')
+  return rail.value === 'edit' ? t('calendar.save') : t('calendar.confirm')
+})
+
+/**
+ * `<input type="time">` speaks "HH:mm"; everything else here counts minutes from
+ * midnight. An unparseable value leaves `draft.start` alone rather than writing
+ * NaN, which would make the whole plate read "Invalid date" while the field is
+ * mid-edit.
+ */
+const draftStartTime = computed({
+  get: () => (draft.start === null ? '' : fromMinutes(draft.start)),
+  set: (value) => {
+    const [hours, minutes] = String(value).split(':').map(Number)
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return
+    draft.start = hours * 60 + minutes
+  }
+})
+
 /* — detail — */
 
 const detail = computed(() => {
@@ -374,10 +426,32 @@ function startNew(payload) {
     // No gap tapped: start at the day's opening, or 09:00 if it is closed.
     draft.start = activeColumn.value?.open ?? 540
   }
+  draft.id = null
   draft.customerId = null
   draft.serviceIds = []
   selectedId.value = null
   rail.value = 'new'
+}
+
+/**
+ * Loads the selected reservation into the same form the new-booking rail uses.
+ *
+ * Services come from `reservationServices`, which `fetch` includes — the
+ * per-day GetReservations query has `.Include(t => t.ReservationServices)`, so
+ * the ids are already in the store and there is no second request to make.
+ */
+function startEdit() {
+  const reservation = reservations.getReservationById(selectedId.value)
+  if (!reservation) return
+
+  const start = moment(reservation.startTime)
+  draft.id = reservation.id
+  draft.start = start.hours() * 60 + start.minutes()
+  draft.customerId = reservation.customerId
+  draft.serviceIds = (reservation.reservationServices ?? []).map((row) => row.serviceId)
+
+  activeKey.value = start.format('YYYY-MM-DD')
+  rail.value = 'edit'
 }
 
 function toggleService(id) {
@@ -398,16 +472,35 @@ function closeRail() {
 }
 
 async function confirmDraft() {
-  if (!draftReady.value) return
+  if (!draftReady.value || saving.value) return
 
   const start = activeDay.value
     .clone()
     .startOf('day')
     .add(draft.start, 'minutes')
 
-  await reservations.createReservation({
-    startTime: start.toISOString(),
-    endTime: start.clone().add(draftMinutes.value, 'minutes').toISOString(),
+  // Both endpoints read `Kind != Utc` and call ToUniversalTime(), so a `Z`
+  // timestamp is passed through untouched. Newtonsoft's RoundtripKind default
+  // is what makes a trailing Z arrive as DateTimeKind.Utc.
+  const startTime = start.toISOString()
+  const endTime = start.clone().add(draftMinutes.value, 'minutes').toISOString()
+
+  saving.value = true
+  try {
+    if (draft.id) await saveEdit(startTime, endTime)
+    else await saveNew(startTime, endTime)
+  } finally {
+    saving.value = false
+  }
+
+  rail.value = 'summary'
+  selectedId.value = null
+}
+
+function saveNew(startTime, endTime) {
+  return reservations.createReservation({
+    startTime,
+    endTime,
     customerId: draft.customerId,
     // The nested customer is required, not a convenience: OwnerRepo's
     // CreateReservation reads `reservation.Customer.Id` before anything else,
@@ -419,8 +512,44 @@ async function confirmDraft() {
     cost: draftTotal.value,
     reservationServices: draft.serviceIds.map((serviceId) => ({ serviceId }))
   })
+}
 
-  rail.value = 'summary'
+/**
+ * Update is a full replace, so the payload has to carry the whole record.
+ *
+ * OwnerRepo.UpdateReservation calls `_context.Update(reservation)` on the entity
+ * as posted — the same trap as UpdateCustomer and UpdateSchedule. Any column
+ * left out of the body is written back as its default, so sending just the four
+ * fields the form edits would silently reset `remindInMin` to 0 (killing the
+ * reminder the Workers host is waiting to send), flip `reservationType` from
+ * CustomerWeb to OwnerApp on anything booked through the public site, clear
+ * `isConfirmed`, and overwrite `createdDateUTC`.
+ *
+ * Spreading the stored record first is what prevents that. `date` is dropped
+ * because the store adds it for grouping and it is not a column.
+ *
+ * The join rows are sent as bare `{ serviceId }`, deliberately WITHOUT the
+ * `reservationId` the API sent us. The repo does a RemoveRange of the existing
+ * rows and then Update in one SaveChanges; a child arriving with its key
+ * populated is classified Modified rather than Added, and the row it would
+ * update is the one already queued for deletion, so it is silently dropped.
+ * Measured against the API: posting two rows with `reservationId` stores one,
+ * posting one with a changed `serviceId` stores none, and the same payload
+ * without `reservationId` stores all of them. Create has always sent the bare
+ * shape, which is why the create path never showed this.
+ */
+function saveEdit(startTime, endTime) {
+  const { date, ...record } = reservations.getReservationById(draft.id) ?? {}
+
+  return reservations.updateReservation(draft.id, {
+    ...record,
+    startTime,
+    endTime,
+    customerId: draft.customerId,
+    customer: customers.getCustomerById?.(draft.customerId) ?? record.customer ?? null,
+    cost: draftTotal.value,
+    reservationServices: draft.serviceIds.map((serviceId) => ({ serviceId }))
+  })
 }
 
 async function remove() {
@@ -766,12 +895,23 @@ watch(
   font-size: 11px;
 }
 
+.rail__edit,
 .rail__delete {
   min-height: 42px;
   margin-top: 8px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 11px;
+}
+
+/*
+ * The design system's `.input` carries the look; this only adds the gap the
+ * other rail fields get from their own wrappers, and stops Safari collapsing a
+ * time input to its intrinsic width.
+ */
+.rail__time {
+  margin-bottom: 20px;
+  min-width: 0;
 }
 /* ──────────────────────────────────────────────────────────────────────────
    Below 1024px: week strip + day plate + timeline in one column, and the rail
